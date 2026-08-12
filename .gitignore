@@ -1,0 +1,24 @@
+# Firmware credentials
+firmware/medcare_dispenser/credentials.h
+
+# Arduino / ESP32 build artifacts
+*.bin
+*.elf
+*.map
+*.hex
+build/
+.pio/
+.vscode/
+
+# Editor/OS cruft 
+.DS_Store
+Thumbs.db
+*.swp
+
+# Flutter app 
+app/**/build/
+app/**/.dart_tool/
+app/**/*.g.dart
+app/**/android/local.properties
+app/**/lib/firebase_options.dart
+app/**/android/app/google-services.json
