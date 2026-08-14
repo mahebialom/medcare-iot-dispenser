@@ -46,6 +46,56 @@ class NotificationService extends ChangeNotifier {
     return prefs.getString(_currentUidKey);
   }
 
+  /// Persists a notification to history from the BACKGROUND isolate —
+  /// a separate, fresh Dart environment with no access to a running
+  /// NotificationService instance (no _uid, no _seenIds, no
+  /// notifyListeners()). This re-implements just the storage side of
+  /// addIfNew() as a standalone static call: load this uid's saved
+  /// list fresh, dedupe against IT (not in-memory _seenIds, which
+  /// doesn't exist here), cap, and save back. The OS-level banner
+  /// itself is shown separately by firebaseMessagingBackgroundHandler
+  /// using its own FlutterLocalNotificationsPlugin instance — this
+  /// method only handles history persistence.
+  static Future<void> addIfNewBackground({
+    required String uid,
+    required String id,
+    required AppNotificationType type,
+    required String title,
+    required String body,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_prefsKeyPrefix$uid';
+
+    List<AppNotification> list = [];
+    final raw = prefs.getString(key);
+    if (raw != null) {
+      try {
+        list = (jsonDecode(raw) as List)
+            .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        list = []; // corrupted cache — start fresh rather than crash
+      }
+    }
+
+    if (list.any((n) => n.id == id)) return; // already recorded — de-dup
+
+    list.insert(
+        0,
+        AppNotification(
+            id: id,
+            type: type,
+            title: title,
+            body: body,
+            timestamp: DateTime.now()));
+    if (list.length > _maxHistory) {
+      list = list.sublist(0, _maxHistory);
+    }
+
+    await prefs.setString(
+        key, jsonEncode(list.map((n) => n.toJson()).toList()));
+  }
+
   /// One-time OS-level setup (permission request, notification
   /// channel) — this is device/platform config, NOT user-specific, so
   /// call it once ever, regardless of who signs in. Safe to call
@@ -60,10 +110,11 @@ class NotificationService extends ChangeNotifier {
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(initSettings);
 
-    final androidImpl =
-        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await androidImpl?.requestNotificationsPermission();
-    await androidImpl?.createNotificationChannel(const AndroidNotificationChannel(
+    await androidImpl
+        ?.createNotificationChannel(const AndroidNotificationChannel(
       _channelId,
       'MedCare Alerts',
       description: 'Missed doses, low stock, and upcoming dose reminders',
@@ -141,7 +192,8 @@ class NotificationService extends ChangeNotifier {
   Future<void> _persist() async {
     if (_uid == null) return; // nothing to persist to while signed out
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_notifications.map((n) => n.toJson()).toList()));
+    await prefs.setString(
+        _prefsKey, jsonEncode(_notifications.map((n) => n.toJson()).toList()));
   }
 
   /// Adds a notification if [id] hasn't been seen before — de-dup is
@@ -158,8 +210,12 @@ class NotificationService extends ChangeNotifier {
     if (_seenIds.contains(id)) return;
     _seenIds.add(id);
 
-    final notification =
-        AppNotification(id: id, type: type, title: title, body: body, timestamp: DateTime.now());
+    final notification = AppNotification(
+        id: id,
+        type: type,
+        title: title,
+        body: body,
+        timestamp: DateTime.now());
     _notifications.insert(0, notification);
     if (_notifications.length > _maxHistory) {
       _notifications = _notifications.sublist(0, _maxHistory);

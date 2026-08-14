@@ -103,14 +103,14 @@ class PushNotificationService {
 /// BEFORE runApp() — see the setup notes for the exact snippet, since
 /// main.dart isn't being edited directly here.
 ///
-/// DELIBERATELY MINIMAL: an earlier version of this routed through
-/// NotificationService (SharedPreferences reads/writes, platform
-/// re-init) so background pushes would also persist to history — but
-/// that added real complexity to a background isolate, and auto-logout
-/// symptoms appeared after that complexity was added. Trading away
-/// "history saved while backgrounded" for reliability here until that
-/// correlation is confirmed or ruled out — see the diagnostic test in
-/// the accompanying notes before adding this back.
+/// Persists to history via NotificationService.addIfNewBackground() —
+/// a standalone static method safe to call from this isolated context
+/// (see its docs for why a live NotificationService instance can't be
+/// used here). Reads the last-known signed-in uid via
+/// NotificationService.readCurrentUid(); if that comes back null (no
+/// one signed in / device shared and nobody currently logged in), we
+/// still show the OS banner but skip history persistence, since there's
+/// no per-user history to own it.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -119,6 +119,21 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final title = data['title'] ?? 'MedCare Alert';
   final body = data['body'] ?? '';
   final id = data['id'] ?? title;
+  final typeRaw = data['type'];
+
+  final uid = await NotificationService.readCurrentUid();
+  if (uid != null && typeRaw != null) {
+    await NotificationService.addIfNewBackground(
+      uid: uid,
+      id: id,
+      type: AppNotificationType.values.firstWhere(
+        (t) => t.name == typeRaw,
+        orElse: () => AppNotificationType.missed,
+      ),
+      title: title,
+      body: body,
+    );
+  }
 
   final plugin = FlutterLocalNotificationsPlugin();
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
