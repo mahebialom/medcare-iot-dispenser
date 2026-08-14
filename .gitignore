@@ -6,19 +6,47 @@ firmware/medcare_dispenser/credentials.h
 *.elf
 *.map
 *.hex
-build/
 .pio/
+
+# Flutter/Dart
+medcare_app/.dart_tool/
+medcare_app/.flutter-plugins
+medcare_app/.flutter-plugins-dependencies
+medcare_app/.packages
+medcare_app/.pub-cache/
+medcare_app/build/
+medcare_app/**/*.g.dart
+
+# Firebase credentials — DO NOT COMMIT
+medcare_app/lib/firebase_options.dart
+medcare_app/android/app/google-services.json
+medcare_app/ios/Runner/GoogleService-Info.plist
+medcare_app/.firebaserc
+
+# Android
+medcare_app/android/key.properties
+medcare_app/android/app/*.jks
+medcare_app/android/app/*.keystore
+medcare_app/android/local.properties
+medcare_app/android/.gradle/
+medcare_app/android/captures/
+**/*.keystore
+**/*.jks
+GeneratedPluginRegistrant.java
+.cxx/
+
+# Cloud Functions
+medcare_app/functions/node_modules/
+
+# IDE
+.idea/
+*.iml
 .vscode/
 
-# Editor/OS cruft 
+# OS/editor cruft
 .DS_Store
 Thumbs.db
 *.swp
 
-# Flutter app 
-app/**/build/
-app/**/.dart_tool/
-app/**/*.g.dart
-app/**/android/local.properties
-app/**/lib/firebase_options.dart
-app/**/android/app/google-services.json
+# Misc build/debug output
+build_log.txt
