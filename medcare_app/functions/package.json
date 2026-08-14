@@ -1,0 +1,11 @@
+{
+  "name": "functions",
+  "description": "MedCare IoT — event-triggered and scheduled push notifications",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1"
+  },
+  "private": true
+}

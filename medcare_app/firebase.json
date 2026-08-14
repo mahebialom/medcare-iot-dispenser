@@ -1,0 +1,26 @@
+
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "medcare-iot",
+          "appId": "1:243254687578:android:ba0fc86c594658fd4a2563",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "medcare-iot",
+          "configurations": {
+            "web": "1:243254687578:web:4e146f8f6bc9b84e4a2563"
+          }
+        }
+      }
+    }
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  }
+}
