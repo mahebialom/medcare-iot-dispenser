@@ -36,7 +36,7 @@ GeneratedPluginRegistrant.java
 .cxx/
 
 # Cloud Functions
-medcare_app/functions/node_modules/
+medcare_app/functions/node_modules
 
 # IDE
 .idea/
