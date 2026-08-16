@@ -3,15 +3,20 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'config.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/username_setup_screen.dart';
 import 'app_root.dart';
+import 'services/firebase_service.dart';
 import 'services/push_notification_service.dart';
 
 const _kWasSignedInKey = 'auth_was_signed_in';
 
 /// Root-level router: Splash while Firebase resolves the current auth
-/// state, then either LoginScreen (signed out) or AppRoot (signed in).
+/// state, then LoginScreen (signed out), UsernameSetupScreen (signed
+/// in but no caregiver profile yet — a first-time Google sign-in), or
+/// AppRoot (signed in with a profile).
 ///
 /// Handles three distinct "signed out" scenarios differently:
 ///
@@ -32,6 +37,14 @@ const _kWasSignedInKey = 'auth_was_signed_in';
 ///    (getAccountInfo via reload()) periodically and on app resume, so
 ///    a remote disable/delete kicks the user out promptly.
 ///
+/// PROFILE CHECK: any time we land on a genuinely signed-in user (from
+/// any of the paths above), we check whether a caregiver profile
+/// exists for them in the database. Email/password registration always
+/// saves its profile before AuthGate ever sees that signed-in event,
+/// so this only ever comes back "missing" for a first-time Google
+/// sign-in — in which case we show UsernameSetupScreen instead of the
+/// app until they've picked one.
+///
 /// This device is shared by multiple caregivers, so signOut() also
 /// unregisters this device's FCM token so whoever's no longer signed
 /// in stops receiving push alerts. That cleanup requires reaching
@@ -44,10 +57,6 @@ const _kWasSignedInKey = 'auth_was_signed_in';
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
-  /// Attach this key to the AuthGate instance so other parts of the
-  /// app can call `AuthGate.authGateKey.currentState?.signOut()` for
-  /// an instant, no-poll, connectivity-checked logout instead of
-  /// calling FirebaseAuth.instance.signOut() directly.
   static final GlobalKey<_AuthGateState> authGateKey = GlobalKey<_AuthGateState>();
 
   @override
@@ -57,27 +66,21 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   Timer? _validityTimer;
   StreamSubscription<User?>? _authStateSub;
+  final _firebaseService = FirebaseService(kDeviceId);
 
   User? _currentUser;
   bool _authResolved = false;
-
-  // AppLifecycleState.resumed fires almost immediately on a cold start
-  // too (not just on genuinely returning from background) — before the
-  // network/token has necessarily settled. Skip that first, spurious
-  // resume.
   bool _firstResumeSkipped = false;
-
   bool _minSplashElapsed = false;
-
-  // Incremented on every new auth event; an in-flight poll checks this
-  // and bails out if it's been superseded, so overlapping async work
-  // never clobbers newer state.
   int _pollGeneration = 0;
-
-  // Set right before we intentionally call signOut() (user tapped
-  // logout, or we detected a remote disable/delete). Tells the next
-  // null event to skip the restore-race poll and go straight to login.
   bool _explicitSignOutInProgress = false;
+
+  // Profile-existence check — separate from auth resolution above.
+  // Reset to unchecked whenever the signed-in user changes or signs
+  // out; re-run every time we land on a genuinely signed-in user.
+  bool _profileChecked = false;
+  bool _hasProfile = false;
+  int _profileCheckGeneration = 0;
 
   @override
   void initState() {
@@ -96,6 +99,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       _currentUser = initial;
       _authResolved = true;
       _markWasSignedIn(true);
+      _checkProfile(initial.uid);
     }
 
     _authStateSub = FirebaseAuth.instance.authStateChanges().listen(_handleAuthEvent);
@@ -109,6 +113,44 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   Future<bool> _getWasSignedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_kWasSignedInKey) ?? false;
+  }
+
+  /// Kicks off (or restarts, if the signed-in user changed) the
+  /// profile-existence check. Safe to call multiple times — a
+  /// generation counter ensures only the LATEST check's result is ever
+  /// applied, so a fast sign-out/sign-in cycle can't have a stale
+  /// check overwrite newer state.
+  void _checkProfile(String uid) {
+    _profileCheckGeneration++;
+    final myGeneration = _profileCheckGeneration;
+    _profileChecked = false;
+
+    _firebaseService.caregiverProfileExists(uid).then((exists) {
+      if (!mounted || myGeneration != _profileCheckGeneration) return;
+      setState(() {
+        _hasProfile = exists;
+        _profileChecked = true;
+      });
+    }).catchError((_) {
+      if (!mounted || myGeneration != _profileCheckGeneration) return;
+      // On error (e.g. offline right at this moment) assume a profile
+      // exists rather than blocking a normal returning user from
+      // reaching the app — this only matters for the rare case of a
+      // first-time Google user who is ALSO offline at this exact
+      // instant, and they'll simply be asked for a username the next
+      // time this check runs successfully.
+      setState(() {
+        _hasProfile = true;
+        _profileChecked = true;
+      });
+    });
+  }
+
+  /// Called by UsernameSetupScreen once the profile has been saved —
+  /// lets AuthGate move straight to AppRoot without waiting for
+  /// another database round-trip.
+  void markProfileComplete() {
+    setState(() => _hasProfile = true);
   }
 
   /// Plain device-level connectivity check (WiFi or mobile data
@@ -152,12 +194,17 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       debugPrint('[AuthGate] authStateChanges: signed in (${user.uid})');
       _explicitSignOutInProgress = false;
       _markWasSignedIn(true);
+      _checkProfile(user.uid);
       setState(() {
         _currentUser = user;
         _authResolved = true;
       });
       return;
     }
+
+    _profileCheckGeneration++; // cancel any in-flight profile check
+    _profileChecked = false;
+    _hasProfile = false;
 
     if (_explicitSignOutInProgress) {
       debugPrint('[AuthGate] explicit sign-out — skipping poll, going to login immediately');
@@ -198,6 +245,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       final resolvedUser = FirebaseAuth.instance.currentUser;
       if (resolvedUser != null) {
         debugPrint('[AuthGate] session restored on attempt $i — race avoided');
+        _checkProfile(resolvedUser.uid);
         setState(() {
           _currentUser = resolvedUser;
           _authResolved = true;
@@ -250,10 +298,9 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       debugPrint('[AuthGate] _checkStillValid() error: ${e.code}'
           '${kickOutCodes.contains(e.code) ? " — signing out" : " — ignoring (not a kick-out code)"}');
       if (kickOutCodes.contains(e.code)) {
-        // Remote invalidation is just as "intentional/final" as a
-        // manual logout. reload() only succeeds if we were online, so
-        // no connectivity gate is needed here — reaching this point
-        // already proves Firebase was reachable.
+        // reload() only succeeds if we were online, so no connectivity
+        // gate is needed here — reaching this point already proves
+        // Firebase was reachable.
         _explicitSignOutInProgress = true;
         _pollGeneration++;
         await _markWasSignedIn(false);
@@ -270,9 +317,15 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     if (!_authResolved || !_minSplashElapsed) {
       return const SplashScreen();
     }
-    if (_currentUser != null) {
-      return const AppRoot();
+    if (_currentUser == null) {
+      return const LoginScreen();
     }
-    return const LoginScreen();
+    if (!_profileChecked) {
+      return const SplashScreen();
+    }
+    if (!_hasProfile) {
+      return const UsernameSetupScreen();
+    }
+    return const AppRoot();
   }
 }

@@ -130,6 +130,18 @@ class FirebaseService {
     return snap.exists;
   }
 
+  /// Checks whether a caregiver profile already exists in the database
+  /// for this uid. Used by AuthGate right after ANY sign-in (email or
+  /// Google) to decide whether to show the app or a one-time username
+  /// setup step. Email/password registration always calls
+  /// saveCaregiverProfile() itself before this is ever checked for
+  /// that user, so this only ever comes back false for a genuinely
+  /// first-time Google sign-in.
+  Future<bool> caregiverProfileExists(String uid) async {
+    final snap = await _root.child('caregivers/$uid').get().timeout(const Duration(seconds: 8));
+    return snap.exists;
+  }
+
   /// Writes the caregiver's profile AND claims their username in one
   /// atomic multi-path update — either both succeed or neither does,
   /// so you can never end up with a claimed username pointing at a
