@@ -66,12 +66,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 const SizedBox(height: 6),
                 Text('Smart medicine dispenser',
                     style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.75))),
-                const SizedBox(height: 32),
-                const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(Colors.white)),
-                ),
+
               ]),
             ),
           ),
