@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../widgets/status_bar_style.dart';
 
 /// Shown while AuthGate waits for FirebaseAuth's first authStateChanges()
 /// event. Deliberately fixed-light (not theme-aware) since it's a
@@ -37,10 +38,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
+    return StatusBarStyle(
+      brightness: Brightness.dark,
+      child: Scaffold(
+        body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(gradient: AppColors.light.headerGrad),
@@ -71,6 +74,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ),
           ),
         ),
+      ),
       ),
     );
   }

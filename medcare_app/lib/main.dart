@@ -9,12 +9,15 @@ import 'state/app_state.dart';
 import 'auth_gate.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/push_notification_service.dart';
+import 'package:flutter/services.dart';
 
 // Must match DEVICE_ID in your ESP32 firmware exactly.
 const String kDeviceId = 'dispenser_01';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

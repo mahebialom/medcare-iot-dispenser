@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../screens/settings_screen.dart';
 import '../theme/app_colors.dart';
+import 'status_bar_style.dart';
 
 /// Right-side sliding menu — opened from the header's hamburger icon
 /// (replaces the old single settings-gear button). Slides in from the
@@ -11,12 +12,16 @@ import '../theme/app_colors.dart';
 /// Every menu item opens a FULL-SCREEN page (its own Scaffold, AppBar,
 /// and back button) pushed on top of everything — including the
 /// header/tab bar — rather than being embedded inside the existing tab
-/// shell. "Settings" wraps the existing SettingsScreen widget exactly
-/// as before, just presented full-screen now instead of swapped in
-/// place of the PageView. The rest (Account Management, About, Privacy
-/// Policy, Device Settings) are placeholder full-screen pages, ready
-/// for you to build out content into individually later.
-Future<void> showSideMenu(BuildContext context, AppColors c) {
+/// shell. "Device Settings" wraps the existing SettingsScreen widget
+/// (the actual Wi-Fi/low-stock config) full-screen. "Settings" and the
+/// rest (Account Management, About, Privacy Policy) are placeholder
+/// full-screen pages, ready for you to build out content into
+/// individually later.
+///
+/// [isDark] is threaded through to every _FullScreenPage so its status
+/// bar icon color matches the CURRENT theme's card background, rather
+/// than assuming a fixed light surface — see StatusBarStyle usage below.
+Future<void> showSideMenu(BuildContext context, AppColors c, bool isDark) {
   return Navigator.of(context).push(
     PageRouteBuilder(
       opaque: false,
@@ -26,21 +31,22 @@ Future<void> showSideMenu(BuildContext context, AppColors c) {
       transitionDuration: const Duration(milliseconds: 260),
       reverseTransitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (context, animation, secondaryAnimation) {
-        return _SideMenuOverlay(animation: animation, c: c);
+        return _SideMenuOverlay(animation: animation, c: c, isDark: isDark);
       },
     ),
   );
 }
 
 class _SideMenuOverlay extends StatelessWidget {
-  const _SideMenuOverlay({required this.animation, required this.c});
+  const _SideMenuOverlay({required this.animation, required this.c, required this.isDark});
   final Animation<double> animation;
   final AppColors c;
+  final bool isDark;
 
   // Panel occupies roughly the right half of the screen, so the
   // blurred backdrop covers the left portion up to about the middle —
   // adjust this fraction if you want the panel wider/narrower.
-  static const _panelWidthFraction = 0.47;
+  static const _panelWidthFraction = 0.70;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +89,7 @@ class _SideMenuOverlay extends StatelessWidget {
                   width: panelWidth,
                   height: double.infinity,
                   decoration: BoxDecoration(
-                    color: c.cardBg.withOpacity(0.60),
+                    color: c.cardBg.withOpacity(0.45),
                     border: Border(
                         left: BorderSide(color: c.border.withOpacity(0.4))),
                   ),
@@ -93,7 +99,7 @@ class _SideMenuOverlay extends StatelessWidget {
                   // above on the Container.
                   child: Material(
                     type: MaterialType.transparency,
-                    child: SafeArea(child: _SideMenuContent(c: c)),
+                    child: SafeArea(child: _SideMenuContent(c: c, isDark: isDark)),
                   ),
                 ),
               ),
@@ -106,13 +112,10 @@ class _SideMenuOverlay extends StatelessWidget {
 }
 
 class _SideMenuContent extends StatelessWidget {
-  const _SideMenuContent({required this.c});
+  const _SideMenuContent({required this.c, required this.isDark});
   final AppColors c;
+  final bool isDark;
 
-  /// Closes the side menu, then pushes [page] as a full-screen route on
-  /// the underlying navigator. Captures the Navigator reference BEFORE
-  /// popping, since the side menu's own widget tree unmounts as soon
-  /// as pop() runs.
   /// Pushes [page] as a full-screen route ON TOP of the side menu —
   /// deliberately does NOT pop the menu first, so it stays in the
   /// navigation stack underneath. This means the system/app back
@@ -172,6 +175,7 @@ class _SideMenuContent extends StatelessWidget {
                   _FullScreenPage(
                       title: 'Settings',
                       c: c,
+                      isDark: isDark,
                       body: _ComingSoonBody(c: c, icon: Icons.tune_outlined)),
                 ),
               ),
@@ -184,6 +188,7 @@ class _SideMenuContent extends StatelessWidget {
                   _FullScreenPage(
                       title: 'Account Management',
                       c: c,
+                      isDark: isDark,
                       body: _ComingSoonBody(
                           c: c, icon: Icons.manage_accounts_outlined)),
                 ),
@@ -197,6 +202,7 @@ class _SideMenuContent extends StatelessWidget {
                   _FullScreenPage(
                       title: 'Device Settings',
                       c: c,
+                      isDark: isDark,
                       body: SettingsScreen(c: c)),
                 ),
               ),
@@ -209,6 +215,7 @@ class _SideMenuContent extends StatelessWidget {
                   _FullScreenPage(
                       title: 'Privacy Policy',
                       c: c,
+                      isDark: isDark,
                       body: _ComingSoonBody(
                           c: c, icon: Icons.privacy_tip_outlined)),
                 ),
@@ -222,13 +229,14 @@ class _SideMenuContent extends StatelessWidget {
                   _FullScreenPage(
                       title: 'About',
                       c: c,
+                      isDark: isDark,
                       body: _ComingSoonBody(c: c, icon: Icons.info_outline)),
                 ),
               ),
             ],
           ),
         ),
-        Divider(color: c.border, height: 1),
+        //Divider(color: c.border, height: 1),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Text('App Version 1.0.0',
@@ -266,29 +274,35 @@ class _MenuTile extends StatelessWidget {
 /// Shared full-screen wrapper for every menu destination — its own
 /// Scaffold, AppBar with a back button, themed to match the app's
 /// current color scheme. [body] is whatever that destination's actual
-/// content is (SettingsScreen for "Settings", a placeholder for the
-/// rest for now).
+/// content is (SettingsScreen for "Device Settings", placeholders for
+/// the rest for now).
 class _FullScreenPage extends StatelessWidget {
   const _FullScreenPage(
-      {required this.title, required this.c, required this.body});
+      {required this.title, required this.c, required this.isDark, required this.body});
   final String title;
   final AppColors c;
+  final bool isDark;
   final Widget body;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: c.cardBg,
-      appBar: AppBar(
+    return StatusBarStyle(
+      // Dark theme's cardBg is a dark surface → white icons.
+      // Light theme's cardBg is a light surface → dark icons.
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      child: Scaffold(
         backgroundColor: c.cardBg,
-        elevation: 0,
-        foregroundColor: c.ink,
-        title: Text(title,
-            style: TextStyle(
-                color: c.ink, fontWeight: FontWeight.bold, fontSize: 16)),
-        iconTheme: IconThemeData(color: c.ink),
+        appBar: AppBar(
+          backgroundColor: c.cardBg,
+          elevation: 0,
+          foregroundColor: c.ink,
+          title: Text(title,
+              style: TextStyle(
+                  color: c.ink, fontWeight: FontWeight.bold, fontSize: 16)),
+          iconTheme: IconThemeData(color: c.ink),
+        ),
+        body: SafeArea(child: body),
       ),
-      body: SafeArea(child: body),
     );
   }
 }

@@ -4,6 +4,7 @@ import '../auth_gate.dart';
 import '../config.dart';
 import '../services/firebase_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/status_bar_style.dart';
 
 /// Shown ONCE, right after a first-time Google sign-in — Google gives
 /// us fullName and email automatically, but has no concept of the
@@ -86,14 +87,16 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName?.trim();
     final email = user?.email ?? '';
 
-    return Scaffold(
-      backgroundColor: c.page,
+    return StatusBarStyle(
+      brightness: Brightness.light,
+      child: Scaffold(
+        backgroundColor: c.page,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -190,6 +193,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

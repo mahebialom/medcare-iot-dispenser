@@ -5,6 +5,7 @@ import '../config.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/status_bar_style.dart';
 
 
 /// Fixed-light for the same reason as SplashScreen — see that file's
@@ -164,9 +165,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: c.page,
-      body: SafeArea(
+    return StatusBarStyle(
+      brightness: Brightness.light,
+      child: Scaffold(
+        backgroundColor: c.page,
+        body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -353,6 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

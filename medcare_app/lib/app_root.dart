@@ -13,6 +13,7 @@ import 'screens/history_screen.dart';
 import 'screens/caregiver_screen.dart';
 import 'screens/settings_screen.dart';
 import 'widgets/side_menu.dart';
+import 'widgets/status_bar_style.dart';
 
 const _tabLabels = ['Dashboard', 'Tray', 'Schedule', 'History', 'Caregiver'];
 const _tabIcons = ['⬡', '⟳', '⏰', '📋', '👥'];
@@ -160,223 +161,249 @@ class _ShellState extends State<_Shell> {
     final isDark = widget.isDark;
     final app = context.watch<AppState>();
     final pending = app.totalToday - app.takenToday;
+    // Real status bar height for this device — used to push the
+    // header's content down below it while letting the gradient
+    // itself paint all the way to the true top of the screen (see
+    // SafeArea(top: false) below).
+    final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      backgroundColor: c.cardBg,
-      body: SafeArea(
-        child: Column(children: [
-          // ── Header ──
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-            decoration: BoxDecoration(gradient: c.headerGrad),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
+    return StatusBarStyle(
+        brightness: Brightness.dark,
+        child: Scaffold(
+          backgroundColor: c.cardBg,
+          body: SafeArea(
+            // top: false — the header gradient bleeds under the status
+            // bar instead of leaving a plain Scaffold-background gap
+            // above it (was showing as a stark white strip in light
+            // mode). Header content is pushed down by statusBarHeight
+            // via its own padding below, so nothing sits under the
+            // status bar icons.
+            top: false,
+            child: Column(children: [
+              // ── Header ──
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(20, statusBarHeight + 16, 20, 14),
+                decoration: BoxDecoration(gradient: c.headerGrad),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    const Text('MEDCARE IOT',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white70,
+                                            letterSpacing: 1)),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: app.status.online
+                                            ? Colors.white24
+                                            : Colors.white10,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                          app.status.online
+                                              ? '● MQTT'
+                                              : '○ Offline',
+                                          style: const TextStyle(
+                                              fontSize: 9,
+                                              color: Colors.white)),
+                                    ),
+                                  ]),
+                                  const SizedBox(height: 2),
+                                  Text('${_greeting()}, ${_greetingName()}',
+                                      style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white)),
+                                ]),
+                          ),
                           Row(children: [
-                            const Text('MEDCARE IOT',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.white70,
-                                    letterSpacing: 1)),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: app.status.online
-                                    ? Colors.white24
-                                    : Colors.white10,
-                                borderRadius: BorderRadius.circular(20),
+                            Builder(
+                              builder: (btnContext) => _HeaderIcon(
+                                onTap: () => _handleThemeTap(btnContext),
+                                child: Text(isDark ? '☀️' : '🌙',
+                                    style: const TextStyle(fontSize: 16)),
                               ),
-                              child: Text(
-                                  app.status.online ? '● MQTT' : '○ Offline',
-                                  style: const TextStyle(
-                                      fontSize: 9, color: Colors.white)),
+                            ),
+                            const SizedBox(width: 8),
+                            Builder(
+                              builder: (btnContext) =>
+                                  Stack(clipBehavior: Clip.none, children: [
+                                _HeaderIcon(
+                                  onTap: () =>
+                                      _showNotifications(btnContext, app, c),
+                                  child: const Icon(
+                                      Icons.notifications_outlined,
+                                      color: Colors.white,
+                                      size: 16),
+                                ),
+                                if (app.notifications.unreadCount > 0)
+                                  Positioned(
+                                    right: -3,
+                                    top: -3,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 1),
+                                      constraints: const BoxConstraints(
+                                          minWidth: 16, minHeight: 16),
+                                      decoration: BoxDecoration(
+                                        color: c.red,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                            color:
+                                                Colors.white.withOpacity(0.9),
+                                            width: 1.5),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        app.notifications.unreadCount > 9
+                                            ? '9+'
+                                            : '${app.notifications.unreadCount}',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                              ]),
+                            ),
+                            const SizedBox(width: 8),
+                            Builder(
+                              builder: (btnContext) => _HeaderIcon(
+                                onTap: () =>
+                                    showSideMenu(btnContext, c, isDark),
+                                child: const Icon(Icons.menu,
+                                    color: Colors.white, size: 18),
+                              ),
                             ),
                           ]),
-                          const SizedBox(height: 2),
-                          Text('${_greeting()}, ${_greetingName()}',
-                              style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                        ]),
-                  ),
-                  Row(children: [
-                    Builder(
-                      builder: (btnContext) => _HeaderIcon(
-                        onTap: () => _handleThemeTap(btnContext),
-                        child: Text(isDark ? '☀️' : '🌙',
-                            style: const TextStyle(fontSize: 16)),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Builder(
-                      builder: (btnContext) =>
-                          Stack(clipBehavior: Clip.none, children: [
-                        _HeaderIcon(
-                          onTap: () => _showNotifications(btnContext, app, c),
-                          child: const Icon(Icons.notifications_outlined,
-                              color: Colors.white, size: 16),
+                      const SizedBox(height: 12),
+                      // ── Today summary strip ──
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        if (app.notifications.unreadCount > 0)
-                          Positioned(
-                            right: -3,
-                            top: -3,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 1),
-                              constraints: const BoxConstraints(
-                                  minWidth: 16, minHeight: 16),
-                              decoration: BoxDecoration(
-                                color: c.red,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                    color: Colors.white.withOpacity(0.9),
-                                    width: 1.5),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                app.notifications.unreadCount > 9
-                                    ? '9+'
-                                    : '${app.notifications.unreadCount}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                      ]),
-                    ),
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('📅 ${_formatToday()}',
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.white)),
+                              Text(
+                                  '✅ ${app.takenToday} of ${app.totalToday} taken',
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.white)),
+                              Text('⚠ $pending pending',
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Color(0xFFFFCC44))),
+                            ]),
+                      ),
+                    ]),
+              ),
+
+              if (!app.isOnline)
+                Container(
+                  width: double.infinity,
+                  color: c.amberBg,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(children: [
+                    Icon(Icons.cloud_off, size: 14, color: c.amber),
                     const SizedBox(width: 8),
-                    Builder(
-                      builder: (btnContext) => _HeaderIcon(
-                        onTap: () => showSideMenu(btnContext, c),
-                        child: const Icon(Icons.menu,
-                            color: Colors.white, size: 18),
+                    Expanded(
+                      child: Text(
+                        'No connection — showing last synced data',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: c.amber,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ]),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // ── Today summary strip ──
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
                 ),
+
+              // ── Tab bar ──
+              Container(
+                decoration: BoxDecoration(
+                    color: c.panel,
+                    border: Border(bottom: BorderSide(color: c.borderSoft))),
                 child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('📅 ${_formatToday()}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.white)),
-                      Text('✅ ${app.takenToday} of ${app.totalToday} taken',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.white)),
-                      Text('⚠ $pending pending',
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFFFFCC44))),
-                    ]),
+                    children: List.generate(_tabLabels.length, (i) {
+                  final active = app.activeTab == i;
+                  return Expanded(
+                    child: InkWell(
+                      onTap: () => _goToTab(i),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                                color: active ? c.primary : Colors.transparent,
+                                width: 2.5),
+                          ),
+                        ),
+                        child: Column(children: [
+                          Text(_tabIcons[i],
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: active ? c.primary : c.muted)),
+                          const SizedBox(height: 2),
+                          Text(
+                            _tabLabels[i],
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: active ? c.primary : c.muted,
+                              fontWeight:
+                                  active ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  );
+                })),
+              ),
+
+              // ── Content ──
+              Expanded(
+                child: app.settingsOpen
+                    ? SettingsScreen(c: c)
+                    : PageView(
+                        controller: _pageController,
+                        onPageChanged: (i) =>
+                            context.read<AppState>().setTab(i),
+                        children: [
+                          DashboardScreen(c: c),
+                          TrayScreen(c: c),
+                          ScheduleScreen(c: c),
+                          HistoryScreen(c: c),
+                          CaregiverScreen(c: c),
+                        ],
+                      ),
               ),
             ]),
           ),
-
-          if (!app.isOnline)
-            Container(
-              width: double.infinity,
-              color: c.amberBg,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(children: [
-                Icon(Icons.cloud_off, size: 14, color: c.amber),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'No connection — showing last synced data',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: c.amber,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ]),
-            ),
-
-          // ── Tab bar ──
-          Container(
-            decoration: BoxDecoration(
-                color: c.panel,
-                border: Border(bottom: BorderSide(color: c.borderSoft))),
-            child: Row(
-                children: List.generate(_tabLabels.length, (i) {
-              final active = app.activeTab == i;
-              return Expanded(
-                child: InkWell(
-                  onTap: () => _goToTab(i),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                            color: active ? c.primary : Colors.transparent,
-                            width: 2.5),
-                      ),
-                    ),
-                    child: Column(children: [
-                      Text(_tabIcons[i],
-                          style: TextStyle(
-                              fontSize: 16,
-                              color: active ? c.primary : c.muted)),
-                      const SizedBox(height: 2),
-                      Text(
-                        _tabLabels[i],
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          color: active ? c.primary : c.muted,
-                          fontWeight:
-                              active ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ]),
-                  ),
-                ),
-              );
-            })),
-          ),
-
-          // ── Content ──
-          Expanded(
-            child: app.settingsOpen
-                ? SettingsScreen(c: c)
-                : PageView(
-                    controller: _pageController,
-                    onPageChanged: (i) => context.read<AppState>().setTab(i),
-                    children: [
-                      DashboardScreen(c: c),
-                      TrayScreen(c: c),
-                      ScheduleScreen(c: c),
-                      HistoryScreen(c: c),
-                      CaregiverScreen(c: c),
-                    ],
-                  ),
-          ),
-        ]),
-      ),
-    );
+        ));
   }
 }
 
@@ -384,7 +411,8 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
   app.notifications.markAllRead();
   showModalBottomSheet(
     context: context,
-    backgroundColor: Colors.transparent, // painted below via BackdropFilter instead
+    backgroundColor:
+        Colors.transparent, // painted below via BackdropFilter instead
     barrierColor: Colors.transparent,
     isScrollControlled: true,
     builder: (ctx) => ClipRRect(
@@ -489,8 +517,7 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
                                           children: [
                                             Text(n.title,
                                                 style: TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold,
+                                                    fontWeight: FontWeight.bold,
                                                     fontSize: 13,
                                                     color: c.ink)),
                                             const SizedBox(height: 2),
