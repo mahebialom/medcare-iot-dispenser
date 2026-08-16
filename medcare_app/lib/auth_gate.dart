@@ -45,6 +45,17 @@ const _kWasSignedInKey = 'auth_was_signed_in';
 /// sign-in — in which case we show UsernameSetupScreen instead of the
 /// app until they've picked one.
 ///
+/// SPLASH-FLASH FIX: that profile check is a database round-trip, so
+/// there's a brief gap between "signed in" and "know where to route."
+/// For a COLD START (app launch, restoring a saved session), Splash is
+/// already on screen during that gap — fine, no visible change. But
+/// for an INTERACTIVE sign-in (LoginScreen was just on screen and the
+/// user tapped Sign In), swapping to Splash for that gap and then
+/// immediately swapping again to AppRoot produced a visible one-frame
+/// "flash" of a second splash screen. Fixed by keeping LoginScreen
+/// mounted during the check in that specific case instead of swapping
+/// to Splash — see _handleAuthEvent's `cameFromLogin` check below.
+///
 /// This device is shared by multiple caregivers, so signOut() also
 /// unregisters this device's FCM token so whoever's no longer signed
 /// in stops receiving push alerts. That cleanup requires reaching
@@ -82,6 +93,11 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   bool _hasProfile = false;
   int _profileCheckGeneration = 0;
 
+  // True while the profile check is pending AND we should keep
+  // showing LoginScreen (not Splash) during that gap — see the
+  // SPLASH-FLASH FIX note above.
+  bool _keepShowingLoginDuringProfileCheck = false;
+
   @override
   void initState() {
     super.initState();
@@ -93,7 +109,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
 
     // Seed synchronously if a session is already available — covers
     // the case where restoration finished before we even started
-    // listening.
+    // listening. This is a cold-start path — Splash is already on
+    // screen, so the default (don't keep LoginScreen) is correct.
     final initial = FirebaseAuth.instance.currentUser;
     if (initial != null) {
       _currentUser = initial;
@@ -120,10 +137,15 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   /// generation counter ensures only the LATEST check's result is ever
   /// applied, so a fast sign-out/sign-in cycle can't have a stale
   /// check overwrite newer state.
-  void _checkProfile(String uid) {
+  ///
+  /// [keepShowingLogin]: if true, build() keeps rendering LoginScreen
+  /// (rather than Splash) while this check is pending — see the
+  /// SPLASH-FLASH FIX note on the class.
+  void _checkProfile(String uid, {bool keepShowingLogin = false}) {
     _profileCheckGeneration++;
     final myGeneration = _profileCheckGeneration;
     _profileChecked = false;
+    _keepShowingLoginDuringProfileCheck = keepShowingLogin;
 
     _firebaseService.caregiverProfileExists(uid).then((exists) {
       if (!mounted || myGeneration != _profileCheckGeneration) return;
@@ -192,9 +214,15 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
 
     if (user != null) {
       debugPrint('[AuthGate] authStateChanges: signed in (${user.uid})');
+      // If we were already signed out (LoginScreen was on screen)
+      // right before this event, this is an interactive sign-in —
+      // keep LoginScreen mounted during the profile check instead of
+      // flashing Splash. Otherwise (e.g. a genuine cold-start restore
+      // completing) Splash is already showing, so the default is fine.
+      final cameFromLogin = _currentUser == null;
       _explicitSignOutInProgress = false;
       _markWasSignedIn(true);
-      _checkProfile(user.uid);
+      _checkProfile(user.uid, keepShowingLogin: cameFromLogin);
       setState(() {
         _currentUser = user;
         _authResolved = true;
@@ -205,6 +233,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     _profileCheckGeneration++; // cancel any in-flight profile check
     _profileChecked = false;
     _hasProfile = false;
+    _keepShowingLoginDuringProfileCheck = false;
 
     if (_explicitSignOutInProgress) {
       debugPrint('[AuthGate] explicit sign-out — skipping poll, going to login immediately');
@@ -245,6 +274,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       final resolvedUser = FirebaseAuth.instance.currentUser;
       if (resolvedUser != null) {
         debugPrint('[AuthGate] session restored on attempt $i — race avoided');
+        // Splash has been showing throughout this poll — default
+        // (don't keep LoginScreen) is correct here.
         _checkProfile(resolvedUser.uid);
         setState(() {
           _currentUser = resolvedUser;
@@ -321,7 +352,10 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       return const LoginScreen();
     }
     if (!_profileChecked) {
-      return const SplashScreen();
+      // See SPLASH-FLASH FIX note on the class — keep LoginScreen
+      // mounted (no visible change) for an interactive sign-in;
+      // Splash for a cold-start restore, where it's already showing.
+      return _keepShowingLoginDuringProfileCheck ? const LoginScreen() : const SplashScreen();
     }
     if (!_hasProfile) {
       return const UsernameSetupScreen();
