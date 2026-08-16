@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -96,10 +97,24 @@ class NotificationService extends ChangeNotifier {
         key, jsonEncode(list.map((n) => n.toJson()).toList()));
   }
 
-  /// One-time OS-level setup (permission request, notification
+  /// One-time OS-level setup (permission requests, notification
   /// channel) — this is device/platform config, NOT user-specific, so
   /// call it once ever, regardless of who signs in. Safe to call
   /// multiple times; only does real work the first time.
+  ///
+  /// Requests BOTH the local-notifications permission AND the FCM push
+  /// permission here, at app launch (before anyone's necessarily signed
+  /// in) — rather than the FCM one living inside
+  /// PushNotificationService.init() (which only runs once a user is
+  /// signed in, see AppState._startDataSubscriptions()). On a
+  /// brand-new install, that meant the very first time FCM permission
+  /// was ever requested was mid-way through the FIRST registration's
+  /// own async chain (register → updateDisplayName → reload →
+  /// saveCaregiverProfile), which could interrupt/delay getToken() long
+  /// enough for it to come back null for that one attempt only. Every
+  /// later sign-in, permission was already resolved, so init() sailed
+  /// through instantly — matches exactly the "only the very first
+  /// account on a fresh install fails to register a token" symptom.
   Future<void> initPlatform() async {
     if (_platformInitialized) return;
     _platformInitialized = true;
@@ -110,16 +125,18 @@ class NotificationService extends ChangeNotifier {
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(initSettings);
 
-    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+ final androidImpl = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     await androidImpl?.requestNotificationsPermission();
-    await androidImpl
-        ?.createNotificationChannel(const AndroidNotificationChannel(
+    await androidImpl?.createNotificationChannel(const AndroidNotificationChannel(
       _channelId,
       'MedCare Alerts',
       description: 'Missed doses, low stock, and upcoming dose reminders',
       importance: Importance.high,
     ));
+
+    // FCM push permission — moved here from PushNotificationService.init()
+    // for the timing reason explained above.
+    await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
   }
 
   /// Switches which user's notification history is active — call this

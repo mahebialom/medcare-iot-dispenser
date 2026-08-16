@@ -33,15 +33,26 @@ import 'notification_service.dart';
 /// must persist across the app being closed or force-killed while
 /// still signed in, and is only ever cleared by an explicit,
 /// successful, online sign-out.
+///
+/// NOTE: FCM push PERMISSION is requested once, at app launch, inside
+/// NotificationService.initPlatform() — NOT here. See that method's
+/// doc comment for why (a first-registration-only token-failure bug
+/// traced to permission-request timing).
 class PushNotificationService {
   final _messaging = FirebaseMessaging.instance;
 
   Future<void> init({required String uid, required NotificationService notifications}) async {
     if (kIsWeb) return; // this targets mobile; web push needs separate VAPID key setup
 
-    await _messaging.requestPermission(alert: true, badge: true, sound: true);
-
-    final token = await _messaging.getToken();
+    // Permission is already requested in NotificationService.initPlatform()
+    // at app launch, well before this ever runs.
+    var token = await _messaging.getToken();
+    if (token == null) {
+      // Rare fallback — brief retry in case the token genuinely wasn't
+      // ready yet for some other transient reason.
+      await Future.delayed(const Duration(seconds: 2));
+      token = await _messaging.getToken();
+    }
     if (token != null) await _saveToken(uid, token);
     _messaging.onTokenRefresh.listen((newToken) => _saveToken(uid, newToken));
 
