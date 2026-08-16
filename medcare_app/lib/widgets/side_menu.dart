@@ -113,10 +113,14 @@ class _SideMenuContent extends StatelessWidget {
   /// the underlying navigator. Captures the Navigator reference BEFORE
   /// popping, since the side menu's own widget tree unmounts as soon
   /// as pop() runs.
+  /// Pushes [page] as a full-screen route ON TOP of the side menu —
+  /// deliberately does NOT pop the menu first, so it stays in the
+  /// navigation stack underneath. This means the system/app back
+  /// button from within a section returns to the side menu (not all
+  /// the way past it to the main screen) — matching what someone would
+  /// expect from "go back" while inside a submenu.
   void _openFullScreen(BuildContext context, Widget page) {
-    final navigator = Navigator.of(context);
-    navigator.pop();
-    navigator.push(MaterialPageRoute(builder: (_) => page));
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
   }
 
   @override
@@ -124,8 +128,10 @@ class _SideMenuContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        Container(
+          color: c.cardBg.withOpacity(
+              0.2), // slightly different tint than the panel behind it
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 10),
           child: Row(
             children: [
               Container(
@@ -152,10 +158,10 @@ class _SideMenuContent extends StatelessWidget {
             ],
           ),
         ),
-       // Divider(color: c.border, height: 1),
+        // Divider(color: c.border, height: 1),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 0),
             children: [
               _MenuTile(
                 icon: Icons.settings_outlined,
@@ -164,7 +170,9 @@ class _SideMenuContent extends StatelessWidget {
                 onTap: () => _openFullScreen(
                   context,
                   _FullScreenPage(
-                      title: 'Settings', c: c, body: SettingsScreen(c: c)),
+                      title: 'Settings',
+                      c: c,
+                      body: _ComingSoonBody(c: c, icon: Icons.tune_outlined)),
                 ),
               ),
               _MenuTile(
@@ -181,15 +189,15 @@ class _SideMenuContent extends StatelessWidget {
                 ),
               ),
               _MenuTile(
-                icon: Icons.info_outline,
-                label: 'About',
+                icon: Icons.tune_outlined,
+                label: 'Device Settings',
                 c: c,
                 onTap: () => _openFullScreen(
                   context,
                   _FullScreenPage(
-                      title: 'About',
+                      title: 'Device Settings',
                       c: c,
-                      body: _ComingSoonBody(c: c, icon: Icons.info_outline)),
+                      body: SettingsScreen(c: c)),
                 ),
               ),
               _MenuTile(
@@ -206,15 +214,15 @@ class _SideMenuContent extends StatelessWidget {
                 ),
               ),
               _MenuTile(
-                icon: Icons.tune_outlined,
-                label: 'Device Settings',
+                icon: Icons.info_outline,
+                label: 'About',
                 c: c,
                 onTap: () => _openFullScreen(
                   context,
                   _FullScreenPage(
-                      title: 'Device Settings',
+                      title: 'About',
                       c: c,
-                      body: _ComingSoonBody(c: c, icon: Icons.tune_outlined)),
+                      body: _ComingSoonBody(c: c, icon: Icons.info_outline)),
                 ),
               ),
             ],

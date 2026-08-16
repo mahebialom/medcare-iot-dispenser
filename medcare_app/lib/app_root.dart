@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -383,107 +384,137 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
   app.notifications.markAllRead();
   showModalBottomSheet(
     context: context,
-    backgroundColor: c.cardBg,
+    backgroundColor: Colors.transparent, // painted below via BackdropFilter instead
+    barrierColor: Colors.transparent,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    builder: (ctx) => DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.3,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (ctx, scrollController) {
-        final items = app.notifications.notifications;
-        return Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Notifications',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: c.ink)),
-                  Icon(Icons.drag_handle, color: c.muted),
-                ]),
+    builder: (ctx) => ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: c.cardBg.withOpacity(0.15),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          Expanded(
-            child: items.isEmpty
-                ? Center(
-                    child: Text('No notifications yet',
-                        style: TextStyle(color: c.muted, fontSize: 13)),
-                  )
-                : ListView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                    itemCount: items.length,
-                    itemBuilder: (ctx, i) {
-                      final n = items[i];
-                      final IconData icon;
-                      final Color color;
-                      switch (n.type) {
-                        case AppNotificationType.missed:
-                          icon = Icons.event_busy;
-                          color = c.red;
-                        case AppNotificationType.stockLow:
-                          icon = Icons.inventory_2_outlined;
-                          color = c.amber;
-                        case AppNotificationType.stockCritical:
-                          icon = Icons.warning_amber_rounded;
-                          color = c.red;
-                        case AppNotificationType.upcomingReminder:
-                          icon = Icons.access_time;
-                          color = c.primary;
-                      }
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: c.panel,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: c.border),
-                        ),
-                        child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                    color: color.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(10)),
-                                alignment: Alignment.center,
-                                child: Icon(icon, color: color, size: 17),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(n.title,
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: c.ink)),
-                                      const SizedBox(height: 2),
-                                      Text(n.body,
-                                          style: TextStyle(
-                                              fontSize: 12, color: c.text2)),
-                                      const SizedBox(height: 4),
-                                      Text(_relativeTime(n.timestamp),
-                                          style: TextStyle(
-                                              fontSize: 10, color: c.muted)),
-                                    ]),
-                              ),
-                            ]),
-                      );
-                    },
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.6,
+            minChildSize: 0.3,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (ctx, scrollController) {
+              final items = app.notifications.notifications;
+              return Column(children: [
+                // Centered drag handle, ~2.5x the old icon's visual size.
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 0),
+                  child: Container(
+                    width: 60,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: c.muted.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Notifications',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: c.ink)),
+                        IconButton(
+                          icon: Icon(Icons.close, color: c.muted),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ]),
+                ),
+                Expanded(
+                  child: items.isEmpty
+                      ? Center(
+                          child: Text('No notifications yet',
+                              style: TextStyle(color: c.muted, fontSize: 13)),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                          itemCount: items.length,
+                          itemBuilder: (ctx, i) {
+                            final n = items[i];
+                            final IconData icon;
+                            final Color color;
+                            switch (n.type) {
+                              case AppNotificationType.missed:
+                                icon = Icons.event_busy;
+                                color = c.red;
+                              case AppNotificationType.stockLow:
+                                icon = Icons.inventory_2_outlined;
+                                color = c.amber;
+                              case AppNotificationType.stockCritical:
+                                icon = Icons.warning_amber_rounded;
+                                color = c.red;
+                              case AppNotificationType.upcomingReminder:
+                                icon = Icons.access_time;
+                                color = c.primary;
+                            }
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: c.panel,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: c.border),
+                              ),
+                              child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
+                                          color: color.withOpacity(0.15),
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                      alignment: Alignment.center,
+                                      child: Icon(icon, color: color, size: 17),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(n.title,
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    fontSize: 13,
+                                                    color: c.ink)),
+                                            const SizedBox(height: 2),
+                                            Text(n.body,
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: c.text2)),
+                                            const SizedBox(height: 4),
+                                            Text(_relativeTime(n.timestamp),
+                                                style: TextStyle(
+                                                    fontSize: 10,
+                                                    color: c.muted)),
+                                          ]),
+                                    ),
+                                  ]),
+                            );
+                          },
+                        ),
+                ),
+              ]);
+            },
           ),
-        ]);
-      },
+        ),
+      ),
     ),
   );
 }
