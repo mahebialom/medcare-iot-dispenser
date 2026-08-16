@@ -11,12 +11,24 @@ import 'screens/schedule_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/caregiver_screen.dart';
 import 'screens/settings_screen.dart';
+import 'widgets/side_menu.dart';
 
 const _tabLabels = ['Dashboard', 'Tray', 'Schedule', 'History', 'Caregiver'];
 const _tabIcons = ['⬡', '⟳', '⏰', '📋', '👥'];
 const _weekdayShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _monthShort = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec'
 ];
 
 /// "Tue 4 Aug" — no `intl` package needed for just this.
@@ -134,7 +146,8 @@ class _ShellState extends State<_Shell> {
   void _handleThemeTap(BuildContext buttonContext) {
     // Find the enclosing ThemeRevealState so the moon/sun button can
     // trigger the circular wipe from its own on-screen position.
-    final revealState = buttonContext.findAncestorStateOfType<ThemeRevealState>();
+    final revealState =
+        buttonContext.findAncestorStateOfType<ThemeRevealState>();
     final box = buttonContext.findRenderObject() as RenderBox;
     final globalCenter = box.localToGlobal(box.size.center(Offset.zero));
     revealState?.reveal(globalCenter);
@@ -156,72 +169,101 @@ class _ShellState extends State<_Shell> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
             decoration: BoxDecoration(gradient: c.headerGrad),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        const Text('MEDCARE IOT',
-                            style: TextStyle(fontSize: 11, color: Colors.white70, letterSpacing: 1)),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: app.status.online ? Colors.white24 : Colors.white10,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(app.status.online ? '● MQTT' : '○ Offline',
-                              style: const TextStyle(fontSize: 9, color: Colors.white)),
-                        ),
-                      ]),
-                      const SizedBox(height: 2),
-                      Text('${_greeting()}, ${_greetingName()}',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ]),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            const Text('MEDCARE IOT',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.white70,
+                                    letterSpacing: 1)),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: app.status.online
+                                    ? Colors.white24
+                                    : Colors.white10,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                  app.status.online ? '● MQTT' : '○ Offline',
+                                  style: const TextStyle(
+                                      fontSize: 9, color: Colors.white)),
+                            ),
+                          ]),
+                          const SizedBox(height: 2),
+                          Text('${_greeting()}, ${_greetingName()}',
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ]),
                   ),
                   Row(children: [
                     Builder(
                       builder: (btnContext) => _HeaderIcon(
                         onTap: () => _handleThemeTap(btnContext),
-                        child: Text(isDark ? '☀️' : '🌙', style: const TextStyle(fontSize: 16)),
+                        child: Text(isDark ? '☀️' : '🌙',
+                            style: const TextStyle(fontSize: 16)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Builder(
-                      builder: (btnContext) => Stack(clipBehavior: Clip.none, children: [
+                      builder: (btnContext) =>
+                          Stack(clipBehavior: Clip.none, children: [
                         _HeaderIcon(
                           onTap: () => _showNotifications(btnContext, app, c),
-                          child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 16),
+                          child: const Icon(Icons.notifications_outlined,
+                              color: Colors.white, size: 16),
                         ),
                         if (app.notifications.unreadCount > 0)
                           Positioned(
                             right: -3,
                             top: -3,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
+                              constraints: const BoxConstraints(
+                                  minWidth: 16, minHeight: 16),
                               decoration: BoxDecoration(
                                 color: c.red,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.9),
+                                    width: 1.5),
                               ),
                               alignment: Alignment.center,
                               child: Text(
-                                app.notifications.unreadCount > 9 ? '9+' : '${app.notifications.unreadCount}',
+                                app.notifications.unreadCount > 9
+                                    ? '9+'
+                                    : '${app.notifications.unreadCount}',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
                       ]),
                     ),
                     const SizedBox(width: 8),
-                    _HeaderIcon(
-                      onTap: () => app.toggleSettings(true),
-                      child: const Icon(Icons.settings, color: Colors.white, size: 16),
+                    Builder(
+                      builder: (btnContext) => _HeaderIcon(
+                        onTap: () => showSideMenu(btnContext, c),
+                        child: const Icon(Icons.menu,
+                            color: Colors.white, size: 18),
+                      ),
                     ),
                   ]),
                 ],
@@ -230,19 +272,25 @@ class _ShellState extends State<_Shell> {
               // ── Today summary strip ──
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('📅 ${_formatToday()}',
-                      style: const TextStyle(fontSize: 12, color: Colors.white)),
-                  Text('✅ ${app.takenToday} of ${app.totalToday} taken',
-                      style: const TextStyle(fontSize: 12, color: Colors.white)),
-                  Text('⚠ $pending pending',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFFFFCC44))),
-                ]),
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('📅 ${_formatToday()}',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.white)),
+                      Text('✅ ${app.takenToday} of ${app.totalToday} taken',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.white)),
+                      Text('⚠ $pending pending',
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFFFFCC44))),
+                    ]),
               ),
             ]),
           ),
@@ -258,7 +306,10 @@ class _ShellState extends State<_Shell> {
                 Expanded(
                   child: Text(
                     'No connection — showing last synced data',
-                    style: TextStyle(fontSize: 11, color: c.amber, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: c.amber,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ]),
@@ -266,8 +317,11 @@ class _ShellState extends State<_Shell> {
 
           // ── Tab bar ──
           Container(
-            decoration: BoxDecoration(color: c.panel, border: Border(bottom: BorderSide(color: c.borderSoft))),
-            child: Row(children: List.generate(_tabLabels.length, (i) {
+            decoration: BoxDecoration(
+                color: c.panel,
+                border: Border(bottom: BorderSide(color: c.borderSoft))),
+            child: Row(
+                children: List.generate(_tabLabels.length, (i) {
               final active = app.activeTab == i;
               return Expanded(
                 child: InkWell(
@@ -276,19 +330,24 @@ class _ShellState extends State<_Shell> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(color: active ? c.primary : Colors.transparent, width: 2.5),
+                        bottom: BorderSide(
+                            color: active ? c.primary : Colors.transparent,
+                            width: 2.5),
                       ),
                     ),
                     child: Column(children: [
                       Text(_tabIcons[i],
-                          style: TextStyle(fontSize: 16, color: active ? c.primary : c.muted)),
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: active ? c.primary : c.muted)),
                       const SizedBox(height: 2),
                       Text(
                         _tabLabels[i],
                         style: TextStyle(
                           fontSize: 9.5,
                           color: active ? c.primary : c.muted,
-                          fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              active ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ]),
@@ -326,7 +385,8 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
     context: context,
     backgroundColor: c.cardBg,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (ctx) => DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.3,
@@ -337,15 +397,22 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
         return Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: c.ink)),
-              Icon(Icons.drag_handle, color: c.muted),
-            ]),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Notifications',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: c.ink)),
+                  Icon(Icons.drag_handle, color: c.muted),
+                ]),
           ),
           Expanded(
             child: items.isEmpty
                 ? Center(
-                    child: Text('No notifications yet', style: TextStyle(color: c.muted, fontSize: 13)),
+                    child: Text('No notifications yet',
+                        style: TextStyle(color: c.muted, fontSize: 13)),
                   )
                 : ListView.builder(
                     controller: scrollController,
@@ -377,26 +444,40 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: c.border),
                         ),
-                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration:
-                                BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                            alignment: Alignment.center,
-                            child: Icon(icon, color: color, size: 17),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(n.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.ink)),
-                              const SizedBox(height: 2),
-                              Text(n.body, style: TextStyle(fontSize: 12, color: c.text2)),
-                              const SizedBox(height: 4),
-                              Text(_relativeTime(n.timestamp), style: TextStyle(fontSize: 10, color: c.muted)),
+                        child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                    color: color.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(10)),
+                                alignment: Alignment.center,
+                                child: Icon(icon, color: color, size: 17),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(n.title,
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: c.ink)),
+                                      const SizedBox(height: 2),
+                                      Text(n.body,
+                                          style: TextStyle(
+                                              fontSize: 12, color: c.text2)),
+                                      const SizedBox(height: 4),
+                                      Text(_relativeTime(n.timestamp),
+                                          style: TextStyle(
+                                              fontSize: 10, color: c.muted)),
+                                    ]),
+                              ),
                             ]),
-                          ),
-                        ]),
                       );
                     },
                   ),
