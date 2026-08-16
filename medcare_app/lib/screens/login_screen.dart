@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../theme/app_colors.dart';
 
+
 /// Fixed-light for the same reason as SplashScreen — see that file's
 /// comment. AuthGate swaps this out for AppRoot automatically once
 /// FirebaseAuth's authStateChanges() emits a signed-in user, so there's
@@ -314,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     Expanded(child: Divider(color: c.border)),
                   ]),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 4),
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
@@ -327,20 +328,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: const StadiumBorder(),
                       ),
                       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFF4285F4), Color(0xFFEA4335), Color(0xFFFBBC05), Color(0xFF34A853)],
-                          ).createShader(bounds),
-                          child: const Text('G',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
-                        ),
-                        const SizedBox(width: 12),
+                        Image.asset('assets/icons/google.png', width: 35, height: 35),
+
+                        const SizedBox(width: 4),
                         Text('Continue with Google',
                             style: TextStyle(color: c.ink, fontSize: 15, fontWeight: FontWeight.w600)),
                       ]),
                     ),
                   ),
-                  const Divider(height: 28),
+                  const Divider(height: 20),
                   TextButton(
                     onPressed: _loading
                         ? null
