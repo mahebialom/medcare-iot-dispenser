@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../config.dart';
@@ -90,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final taken = await _firebase.isUsernameTaken(username);
         if (taken) {
-          _showError('That username is already taken — try another.');
+          _showError('That username is already taken.');
           return;
         }
 
@@ -121,7 +122,11 @@ class _LoginScreenState extends State<LoginScreen> {
       // Anything unexpected (permission-denied from a rules mismatch,
       // a network hiccup, etc.) lands here instead of leaving the
       // button stuck spinning forever with no feedback.
-      _showError('Something went wrong. Please try again.');
+      if (e is TimeoutException) {
+        _showError('No internet connection. Please check your connection and try again later.');
+      } else {
+        _showError('Something went wrong. Please try again later.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

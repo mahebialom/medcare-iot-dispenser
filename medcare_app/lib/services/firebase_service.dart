@@ -115,8 +115,18 @@ class FirebaseService {
   /// an already-claimed username (".write": "!data.exists()") for the
   /// actual guarantee. This client-side check just gives a fast, clear
   /// error message before that.
+  ///
+  /// TIMEOUT: .get() has no built-in timeout and can hang indefinitely
+  /// while offline (with persistence enabled, it waits for a real
+  /// server round-trip rather than failing fast) — without this, the
+  /// register flow's loading spinner would never resolve at all while
+  /// offline. Throws a TimeoutException after 8s, which the caller
+  /// catches and turns into a clear "no connection" message.
   Future<bool> isUsernameTaken(String username) async {
-    final snap = await FirebaseDatabase.instance.ref('usernames/${username.toLowerCase()}').get();
+    final snap = await FirebaseDatabase.instance
+        .ref('usernames/${username.toLowerCase()}')
+        .get()
+        .timeout(const Duration(seconds: 8));
     return snap.exists;
   }
 
