@@ -69,7 +69,8 @@ const _kWasSignedInKey = 'auth_was_signed_in';
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
-  static final GlobalKey<_AuthGateState> authGateKey = GlobalKey<_AuthGateState>();
+  static final GlobalKey<_AuthGateState> authGateKey =
+      GlobalKey<_AuthGateState>();
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -94,6 +95,17 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   bool _hasProfile = false;
   int _profileCheckGeneration = 0;
 
+// add alongside the other profile-check state
+  bool _emailRegistrationInProgress = false;
+
+  void beginEmailRegistration() {
+    _emailRegistrationInProgress = true;
+  }
+
+  void endEmailRegistration() {
+    _emailRegistrationInProgress = false;
+  }
+
   // True while the profile check is pending AND we should keep
   // showing LoginScreen (not Splash) during that gap — see the
   // SPLASH-FLASH FIX note above.
@@ -103,7 +115,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _validityTimer = Timer.periodic(const Duration(seconds: 30), (_) => _checkStillValid());
+    _validityTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => _checkStillValid());
     Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted) setState(() => _minSplashElapsed = true);
     });
@@ -120,7 +133,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       _checkProfile(initial.uid);
     }
 
-    _authStateSub = FirebaseAuth.instance.authStateChanges().listen(_handleAuthEvent);
+    _authStateSub =
+        FirebaseAuth.instance.authStateChanges().listen(_handleAuthEvent);
   }
 
   Future<void> _markWasSignedIn(bool value) async {
@@ -182,6 +196,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   /// result and overwrite this.
   void markProfileComplete() {
     _profileCheckGeneration++;
+    _emailRegistrationInProgress = false; // <-- add this
     setState(() {
       _hasProfile = true;
       _profileChecked = true;
@@ -282,7 +297,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     _keepShowingLoginDuringProfileCheck = false;
 
     if (_explicitSignOutInProgress) {
-      debugPrint('[AuthGate] explicit sign-out — skipping poll, going to login immediately');
+      debugPrint(
+          '[AuthGate] explicit sign-out — skipping poll, going to login immediately');
       _explicitSignOutInProgress = false;
       setState(() {
         _currentUser = null;
@@ -291,7 +307,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       return;
     }
 
-    debugPrint('[AuthGate] authStateChanges: null — checking if a session should restore');
+    debugPrint(
+        '[AuthGate] authStateChanges: null — checking if a session should restore');
     _resolveNullEvent();
   }
 
@@ -300,7 +317,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     final wasSignedIn = await _getWasSignedIn();
 
     if (!wasSignedIn) {
-      debugPrint('[AuthGate] no prior session on record — going to login immediately');
+      debugPrint(
+          '[AuthGate] no prior session on record — going to login immediately');
       if (!mounted || myGeneration != _pollGeneration) return;
       setState(() {
         _currentUser = null;
@@ -309,13 +327,15 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       return;
     }
 
-    debugPrint('[AuthGate] prior session on record — polling for restore (up to ~10s)');
+    debugPrint(
+        '[AuthGate] prior session on record — polling for restore (up to ~10s)');
     const interval = Duration(milliseconds: 400);
     const maxAttempts = 25; // ~10s total
 
     for (var i = 0; i < maxAttempts; i++) {
       await Future.delayed(interval);
-      if (!mounted || myGeneration != _pollGeneration) return; // superseded by a newer event
+      if (!mounted || myGeneration != _pollGeneration)
+        return; // superseded by a newer event
 
       final resolvedUser = FirebaseAuth.instance.currentUser;
       if (resolvedUser != null) {
@@ -331,7 +351,8 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       }
     }
 
-    debugPrint('[AuthGate] gave up after ${maxAttempts * interval.inMilliseconds}ms — genuinely signed out');
+    debugPrint(
+        '[AuthGate] gave up after ${maxAttempts * interval.inMilliseconds}ms — genuinely signed out');
     _markWasSignedIn(false);
     if (!mounted || myGeneration != _pollGeneration) return;
     setState(() {
@@ -401,9 +422,21 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       // See SPLASH-FLASH FIX note on the class — keep LoginScreen
       // mounted (no visible change) for an interactive sign-in;
       // Splash for a cold-start restore, where it's already showing.
-      return _keepShowingLoginDuringProfileCheck ? const LoginScreen() : const SplashScreen();
+      return _keepShowingLoginDuringProfileCheck
+          ? const LoginScreen()
+          : const SplashScreen();
     }
     if (!_hasProfile) {
+      if (_emailRegistrationInProgress) {
+        // A saveCaregiverProfile() write is in flight for an email/password
+        // registration — this "no profile yet" result is just the save
+        // racing ahead of us, not a real first-time-Google case. Keep
+        // showing what we were already showing instead of flashing
+        // UsernameSetupScreen.
+        return _keepShowingLoginDuringProfileCheck
+            ? const LoginScreen()
+            : const SplashScreen();
+      }
       return const UsernameSetupScreen();
     }
     return const AppRoot();

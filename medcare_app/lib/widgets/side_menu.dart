@@ -11,15 +11,12 @@ import '../screens/account_management_screen.dart';
 /// blurred/dimmed underneath rather than fully hidden.
 ///
 /// IMPORTANT: menu destinations (Settings, Device Settings, etc.) are
-/// NOT pushed onto the app's main Navigator. They live in a NESTED
-/// Navigator scoped to this menu instead. Reason: pushing an opaque
-/// full-screen page onto the SAME Navigator that owns this blurred,
-/// non-opaque route caused Flutter to stop painting this route while
-/// obscured (a normal optimization) — so popping back caused one
-/// visible frame where the blur hadn't caught up yet (a flash of the
-/// unblurred dashboard). With a nested Navigator, opening/closing a
-/// section never touches the outer route at all, so it's never
-/// obscured and never needs to "catch up" — no flash.
+/// pushed onto the app's MAIN (root) Navigator — not the nested one
+/// this menu used to use for them — so they render truly full-screen
+/// instead of being confined to the side panel's fixed width. See
+/// _SideMenuContent._openFullScreen() for the full explanation of why,
+/// and how that's done without reintroducing the blur-flash bug this
+/// nested Navigator was originally built to avoid.
 ///
 /// The system/app back button still does the right thing without any
 /// extra code: Flutter's Navigator automatically bubbles a pop to the
@@ -128,11 +125,11 @@ class _SideMenuOverlayState extends State<_SideMenuOverlay> {
                   child: Material(
                     type: MaterialType.transparency,
                     child: SafeArea(
-                      // NESTED Navigator — see class doc comment above
-                      // for why. Its single initial route is the menu
-                      // list; _MenuTile.onTap pushes further routes
-                      // (Settings, About, etc.) onto THIS Navigator,
-                      // not the app's main one.
+                      // NESTED Navigator — still used for the menu list
+                      // itself (its single initial route). Destination
+                      // screens (Settings, Account Management, etc.) no
+                      // longer push onto this one — see
+                      // _SideMenuContent._openFullScreen() below.
                       child: Navigator(
                         key: _innerNavKey,
                         onGenerateRoute: (settings) => MaterialPageRoute(
@@ -162,14 +159,55 @@ class _SideMenuContent extends StatelessWidget {
   final bool isDark;
   final VoidCallback onCloseMenu;
 
-  /// Pushes [page] as a full-screen route ON TOP of the NESTED
-  /// Navigator this content lives in (Navigator.of(context) resolves
-  /// to the nearest ancestor Navigator, which is the inner one — see
-  /// _SideMenuOverlayState.build()). This never touches the outer
-  /// blurred route at all, which is exactly what avoids the
-  /// obscured-route repaint flash.
+  /// Pushes [page] as a full-screen destination (Settings, Account
+  /// Management, Device Settings, etc.) on top of the whole app —
+  /// NOT confined to the side panel's fixed width, and WITHOUT closing
+  /// the side-menu overlay underneath.
+  ///
+  /// Two things had to both be true to get this right:
+  ///
+  /// 1. `Navigator.of(context, rootNavigator: true)` — pushes onto the
+  ///    app's MAIN Navigator instead of the nested one this content
+  ///    lives in. The nested Navigator is confined to the panel's
+  ///    fixed `panelWidth` Container, so anything pushed on it (the
+  ///    old behavior) was stuck at ~70% screen width. Pushing on the
+  ///    root Navigator instead makes the destination render truly
+  ///    full-screen.
+  ///
+  /// 2. `opaque: false` on the pushed route — this is what avoids the
+  ///    ORIGINAL blur-flash bug (see showSideMenu's doc comment for
+  ///    the full history), NOT which Navigator it's pushed on. An
+  ///    opaque route (MaterialPageRoute's default) makes Flutter stop
+  ///    painting whatever's underneath once it's fully obscured — so
+  ///    the side-menu overlay (backdrop blur + panel) would stop
+  ///    rendering while this page is open. Popping back would then
+  ///    show one stale, unblurred frame before the backdrop "caught
+  ///    up." With `opaque: false`, the side-menu overlay keeps
+  ///    painting underneath the whole time this page is open, so
+  ///    there's nothing to catch up on: popping back reveals the
+  ///    still-open, correctly-blurred side menu instantly.
+  ///
+  /// Deliberately does NOT call onCloseMenu() — the side-menu overlay
+  /// route is left on the root Navigator's stack, right below this
+  /// page, so the destination's back button naturally lands back on
+  /// the open side menu instead of the bare dashboard.
   void _openFullScreen(BuildContext context, Widget page) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: false,
+        transitionDuration: const Duration(milliseconds: 220),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, __, ___) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+            child: child,
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -321,9 +359,10 @@ class _MenuTile extends StatelessWidget {
 /// Scaffold, AppBar with a back button, themed to match the app's
 /// current color scheme. [body] is whatever that destination's actual
 /// content is (SettingsScreen for "Device Settings", placeholders for
-/// the rest for now). The AppBar's default back button automatically
-/// pops the nested Navigator this page lives in (see _SideMenuContent
-/// doc comment) — no extra wiring needed for "back returns to menu".
+/// the rest for now). The AppBar's default back button pops whichever
+/// Navigator this page was pushed on — since _openFullScreen() above
+/// pushes on the ROOT Navigator, that pop reveals the side-menu
+/// overlay still sitting underneath (see that method's doc comment).
 class _FullScreenPage extends StatelessWidget {
   const _FullScreenPage(
       {required this.title,

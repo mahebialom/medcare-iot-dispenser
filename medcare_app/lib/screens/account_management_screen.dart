@@ -29,7 +29,8 @@ class AccountManagementScreen extends StatefulWidget {
   final AppColors c;
 
   @override
-  State<AccountManagementScreen> createState() => _AccountManagementScreenState();
+  State<AccountManagementScreen> createState() =>
+      _AccountManagementScreenState();
 }
 
 class _AccountManagementScreenState extends State<AccountManagementScreen> {
@@ -55,7 +56,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           'and removes this device from push notifications. This cannot be undone.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -71,7 +74,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     if (!online) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Can't delete account while offline — please connect and try again.")),
+        const SnackBar(
+            content: Text(
+                "Can't delete account while offline — please connect and try again.")),
       );
       return;
     }
@@ -92,9 +97,16 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       // after this; the uid can never sign in again.
       await user.delete();
 
-if (!mounted) return;
+      if (!mounted) return;
       AuthGate.authGateKey.currentState?.forceSignedOutAfterDeletion();
-      
+      // Both the side-menu overlay and this Account Management page were
+      // pushed on the ROOT Navigator (see side_menu.dart's _openFullScreen)
+      // — forceSignedOutAfterDeletion() only swaps what the BASE route
+      // renders (AppRoot -> LoginScreen), it doesn't touch anything pushed
+      // on top of it. Without this, LoginScreen renders correctly underneath
+      // but stays hidden behind the still-open menu/this still-open screen.
+      Navigator.of(context, rootNavigator: true)
+          .popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       final msg = e.code == 'requires-recent-login'
@@ -104,7 +116,8 @@ if (!mounted) return;
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong. Please try again.')),
+        const SnackBar(
+            content: Text('Something went wrong. Please try again.')),
       );
     } finally {
       if (mounted) setState(() => _deleting = false);
@@ -117,14 +130,20 @@ if (!mounted) return;
     final user = FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName?.trim();
     final email = user?.email ?? '';
-    final shownName = (displayName != null && displayName.isNotEmpty) ? displayName : 'Caregiver';
+    final shownName = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : 'Caregiver';
     final initial = shownName.isNotEmpty ? shownName[0].toUpperCase() : '?';
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text('YOUR ACCOUNT',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: c.muted)),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+                color: c.muted)),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(14),
@@ -133,28 +152,42 @@ if (!mounted) return;
             border: Border.all(color: c.border),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
               CircleAvatar(
                 radius: 24,
                 backgroundColor: c.primary.withOpacity(0.15),
-                backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
+                backgroundImage: user?.photoURL != null
+                    ? NetworkImage(user!.photoURL!)
+                    : null,
                 child: user?.photoURL == null
-                    ? Text(initial, style: TextStyle(color: c.primary, fontWeight: FontWeight.bold, fontSize: 16))
+                    ? Text(initial,
+                        style: TextStyle(
+                            color: c.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16))
                     : null,
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(shownName,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: c.ink)),
-                  if (email.isNotEmpty)
-                    Text(email, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: c.muted)),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(shownName,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: c.ink)),
+                      if (email.isNotEmpty)
+                        Text(email,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: c.muted)),
+                    ]),
               ),
             ]),
-const SizedBox(height: 14),
+            const SizedBox(height: 14),
             Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               ElevatedButton.icon(
                 onPressed: _deleting ? null : _confirmDelete,
@@ -162,17 +195,26 @@ const SizedBox(height: 14),
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.delete_forever, size: 15, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.delete_forever,
+                        size: 15, color: Colors.white),
                 label: Text(_deleting ? 'Deleting…' : 'Delete Account',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12)),
                 style: ButtonStyle(
                   backgroundColor: WidgetStateProperty.resolveWith(
-                    (states) => states.contains(WidgetState.disabled) ? c.red.withOpacity(0.6) : c.red,
+                    (states) => states.contains(WidgetState.disabled)
+                        ? c.red.withOpacity(0.6)
+                        : c.red,
                   ),
                   elevation: const WidgetStatePropertyAll(0),
-                  shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                  padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10))),
+                  padding: const WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                 ),
               ),
             ]),
