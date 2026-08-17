@@ -421,7 +421,7 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: c.cardBg.withOpacity(0.15),
+            color: c.cardBg.withOpacity(0.35),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: DraggableScrollableSheet(

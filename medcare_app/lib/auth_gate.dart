@@ -39,11 +39,12 @@ const _kWasSignedInKey = 'auth_was_signed_in';
 ///
 /// PROFILE CHECK: any time we land on a genuinely signed-in user (from
 /// any of the paths above), we check whether a caregiver profile
-/// exists for them in the database. Email/password registration always
-/// saves its profile before AuthGate ever sees that signed-in event,
-/// so this only ever comes back "missing" for a first-time Google
-/// sign-in — in which case we show UsernameSetupScreen instead of the
-/// app until they've picked one.
+/// exists for them in the database. Both the email/password and
+/// Google sign-in paths can race this check against their own profile
+/// write (see login_screen.dart and username_setup_screen.dart) —
+/// both call markProfileComplete() once their save finishes, so a
+/// stale "not found" result from this check can never leave the user
+/// stuck on UsernameSetupScreen after they've already supplied one.
 ///
 /// SPLASH-FLASH FIX: that profile check is a database round-trip, so
 /// there's a brief gap between "signed in" and "know where to route."
@@ -168,11 +169,23 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     });
   }
 
-  /// Called by UsernameSetupScreen once the profile has been saved —
-  /// lets AuthGate move straight to AppRoot without waiting for
-  /// another database round-trip.
+  /// Called once a caregiver profile has just been saved by whoever
+  /// is signing the user up — UsernameSetupScreen (after Google
+  /// sign-in) or LoginScreen (right after email/password
+  /// registration) — so AuthGate can move straight to AppRoot without
+  /// waiting for another database round-trip.
+  ///
+  /// Also bumps the generation counter so that a profile-existence
+  /// check already in flight (started the instant the signed-in event
+  /// fired, which can be BEFORE the caller's own save finishes — see
+  /// login_screen.dart) can't later resolve with a stale "not found"
+  /// result and overwrite this.
   void markProfileComplete() {
-    setState(() => _hasProfile = true);
+    _profileCheckGeneration++;
+    setState(() {
+      _hasProfile = true;
+      _profileChecked = true;
+    });
   }
 
   /// Plain device-level connectivity check (WiFi or mobile data
@@ -207,6 +220,39 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     await PushNotificationService().unregisterToken();
     await FirebaseAuth.instance.signOut();
     return true;
+  }
+
+  /// Call this ONLY after the Firebase Auth account has already been
+  /// permanently deleted (user.delete() succeeded) — NOT for a normal
+  /// sign-out (use signOut() for that).
+  ///
+  /// WHY THIS EXISTS: user.delete() itself triggers authStateChanges()
+  /// to fire null, immediately — often before the caller's next line
+  /// even runs. If that null event arrives before _explicitSignOutInProgress
+  /// is set, AuthGate treats it as an AMBIGUOUS null (the cold-start
+  /// restore-race case) and starts polling for up to 10s instead of
+  /// clearing state right away. Then, since the account is already
+  /// gone, a follow-up FirebaseAuth.instance.signOut() call has no
+  /// actual state change to report — Firebase does NOT re-fire the
+  /// stream for a no-op sign-out — so _currentUser never gets cleared
+  /// at all, and the UI gets stuck showing stale data forever.
+  ///
+  /// This method sidesteps all of that: it doesn't wait for or depend
+  /// on any stream event. It directly clears local state and cancels
+  /// any in-flight poll via the generation counter, so it's correct
+  /// regardless of whether the SDK's own null event already fired,
+  /// is about to fire, or never fires again.
+  void forceSignedOutAfterDeletion() {
+    _explicitSignOutInProgress = false; // no further event expected to matter
+    _pollGeneration++; // cancels any in-flight restore-poll from the race above
+    _profileCheckGeneration++;
+    _profileChecked = false;
+    _hasProfile = false;
+    _markWasSignedIn(false);
+    setState(() {
+      _currentUser = null;
+      _authResolved = true;
+    });
   }
 
   void _handleAuthEvent(User? user) {

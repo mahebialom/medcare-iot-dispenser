@@ -173,18 +173,87 @@ class FirebaseService {
   Future<void> updateCaregiverFullName({required String uid, required String fullName}) =>
       _root.child('caregivers/$uid/fullName').set(fullName);
 
+  /// Marks this caregiver's record as deleted rather than removing it
+  /// outright — preserves ONLY fullName plus a `deleted: true` flag,
+  /// visible in the Firebase console for reference, but filtered out
+  /// of watchCaregivers() below so it never appears in the app's UI.
+  /// Also removes their username claim (so it becomes available again)
+  /// and every FCM token entry registered under their uid on this
+  /// device (covers every device they were ever signed in on).
+  ///
+  /// DESIGN NOTE — changing retention policy later: this is the ONLY
+  /// place that decides what to keep. To switch to full removal
+  /// instead of preservation, change just the caregivers/$uid write
+  /// below from set({'fullName': ..., 'deleted': true}) to
+  /// _root.child('caregivers/$uid').remove() — nothing else in the
+  /// codebase (Caregiver model, caregiver_screen.dart, the
+  /// watchCaregivers() filter, this method's caller) needs to change.
+  ///
+  /// Deliberately does NOT touch Firebase Auth — call
+  /// FirebaseAuth.instance.currentUser?.delete() separately, AFTER
+  /// this completes. Keeping this idempotent (safe to call again) is
+  /// what makes that ordering safe: if the Auth deletion step fails
+  /// (e.g. requires-recent-login), nothing here needs undoing before
+  /// a retry.
+  Future<void> deleteCaregiverAccount(String uid) async {
+    final caregiverSnap = await _root
+        .child('caregivers/$uid')
+        .get()
+        .timeout(const Duration(seconds: 8));
+
+    final data = caregiverSnap.value;
+    final fullName =
+        (data is Map && data['fullName'] != null) ? data['fullName'].toString() : '';
+    final username =
+        (data is Map && data['username'] != null) ? data['username'].toString() : null;
+
+    if (username != null) {
+      await FirebaseDatabase.instance
+          .ref('usernames/${username.toLowerCase()}')
+          .remove();
+    }
+
+    // See DESIGN NOTE above — this line is the single point of control
+    // for the preserve-vs-remove decision.
+    await _root.child('caregivers/$uid').set({
+      'fullName': fullName,
+      'deleted': true,
+    });
+
+    final tokensSnap = await _root
+        .child('fcmTokens')
+        .get()
+        .timeout(const Duration(seconds: 8));
+    if (tokensSnap.exists && tokensSnap.value is Map) {
+      final tokens = tokensSnap.value as Map;
+      final tokenUpdates = <String, dynamic>{};
+      tokens.forEach((token, ownerUid) {
+        if (ownerUid == uid) {
+          tokenUpdates['fcmTokens/$token'] = null;
+        }
+      });
+      if (tokenUpdates.isNotEmpty) {
+        await _root.update(tokenUpdates);
+      }
+    }
+  }
+
   /// The shared caregiver contact list — every caregiver who's signed
   /// up sees every other caregiver's name/email here. This is the
   /// reason saveCaregiverProfile() above writes fullName to the
   /// database at all: Firebase Auth's own displayName field is only
   /// readable by that user themselves via the client SDK, never by
   /// other users looking them up.
+  ///
+  /// Filters out any record with `deleted: true` (see
+  /// deleteCaregiverAccount() above) — those remain visible in the
+  /// Firebase console for reference, but never reach the app's UI.
   Stream<List<Caregiver>> watchCaregivers() {
     return _root.child('caregivers').onValue.map((event) {
       final raw = event.snapshot.value;
       if (raw is! Map) return <Caregiver>[];
       return raw.entries
-          .where((e) => e.value is Map)
+          .where((e) => e.value is Map && (e.value as Map)['deleted'] != true)
           .map((e) => Caregiver.fromJson(e.key.toString(), e.value as Map))
           .toList();
     });

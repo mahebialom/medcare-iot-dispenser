@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../screens/settings_screen.dart';
 import '../theme/app_colors.dart';
 import 'status_bar_style.dart';
+import '../screens/account_management_screen.dart';
 
 /// Right-side sliding menu — opened from the header's hamburger icon
 /// (replaces the old single settings-gear button). Slides in from the
@@ -46,7 +47,8 @@ Future<void> showSideMenu(BuildContext context, AppColors c, bool isDark) {
 }
 
 class _SideMenuOverlay extends StatefulWidget {
-  const _SideMenuOverlay({required this.animation, required this.c, required this.isDark});
+  const _SideMenuOverlay(
+      {required this.animation, required this.c, required this.isDark});
   final Animation<double> animation;
   final AppColors c;
   final bool isDark;
@@ -154,7 +156,8 @@ class _SideMenuOverlayState extends State<_SideMenuOverlay> {
 }
 
 class _SideMenuContent extends StatelessWidget {
-  const _SideMenuContent({required this.c, required this.isDark, required this.onCloseMenu});
+  const _SideMenuContent(
+      {required this.c, required this.isDark, required this.onCloseMenu});
   final AppColors c;
   final bool isDark;
   final VoidCallback onCloseMenu;
@@ -199,7 +202,8 @@ class _SideMenuContent extends StatelessWidget {
               ),
               IconButton(
                 icon: Icon(Icons.close, color: c.muted),
-                onPressed: onCloseMenu, // closes the WHOLE overlay, not just this inner route
+                onPressed:
+                    onCloseMenu, // closes the WHOLE overlay, not just this inner route
               ),
             ],
           ),
@@ -232,8 +236,7 @@ class _SideMenuContent extends StatelessWidget {
                       title: 'Account Management',
                       c: c,
                       isDark: isDark,
-                      body: _ComingSoonBody(
-                          c: c, icon: Icons.manage_accounts_outlined)),
+                      body: AccountManagementScreen(c: c)),
                 ),
               ),
               _MenuTile(
@@ -323,7 +326,10 @@ class _MenuTile extends StatelessWidget {
 /// doc comment) — no extra wiring needed for "back returns to menu".
 class _FullScreenPage extends StatelessWidget {
   const _FullScreenPage(
-      {required this.title, required this.c, required this.isDark, required this.body});
+      {required this.title,
+      required this.c,
+      required this.isDark,
+      required this.body});
   final String title;
   final AppColors c;
   final bool isDark;

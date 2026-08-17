@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../auth_gate.dart';
 import '../config.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
@@ -106,6 +107,18 @@ class _LoginScreenState extends State<LoginScreen> {
         // Registration succeeded — now save the extra profile fields
         // Firebase Auth itself doesn't store (username) alongside what
         // it does (email, displayName already set via register() above).
+        //
+        // NOTE ON A RACE HERE: register() above already triggered
+        // Firebase's authStateChanges() the instant the account was
+        // created — AuthGate's listener reacts to that immediately and
+        // starts its own async check for whether a caregiver profile
+        // exists, running concurrently with the save below. If that
+        // check happens to resolve before saveCaregiverProfile
+        // finishes, it would (correctly, at that instant) report "no
+        // profile" and AuthGate would show UsernameSetupScreen even
+        // though this screen already collected a username. The
+        // markProfileComplete() call right after the save closes that
+        // gap — see its doc comment in auth_gate.dart.
         final uid = FirebaseAuth.instance.currentUser?.uid;
         if (uid != null) {
           await _firebase.saveCaregiverProfile(
@@ -114,6 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
             username: username,
             email: _email.text.trim(),
           );
+          AuthGate.authGateKey.currentState?.markProfileComplete();
         }
         // AuthGate's authStateChanges() stream swaps to AppRoot automatically.
       } else {
