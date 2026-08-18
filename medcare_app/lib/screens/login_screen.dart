@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/status_bar_style.dart';
+import '../widgets/app_toast.dart';
 
 /// Fixed-light for the same reason as SplashScreen — see that file's
 /// comment. AuthGate swaps this out for AppRoot automatically once
@@ -40,8 +41,26 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String? _message;
-  bool _messageIsError = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // A one-shot message left for us by another screen right before it
+    // signed the user out — e.g. AccountManagementScreen after a
+    // successful delete (see setPendingLoginMessage in auth_gate.dart).
+    // Consumed and cleared immediately so it can never show twice.
+    final pending = AuthGate.authGateKey.currentState?.pendingLoginMessage;
+    if (pending != null) {
+      AuthGate.authGateKey.currentState?.pendingLoginMessage = null;
+      // Deferred to after the first frame — this screen's own
+      // Scaffold/ScaffoldMessenger isn't attached yet during
+      // initState(), so showing the toast here directly would fail
+      // silently.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showAppToast(context, pending);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -54,10 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showError(String msg) {
-    setState(() {
-      _message = msg;
-      _messageIsError = true;
-    });
+    showAppToast(context, msg, isError: true);
   }
 
   Future<void> _submit() async {
@@ -85,7 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() {
       _loading = true;
-      _message = null;
     });
 
     try {
@@ -129,6 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
             username: username,
             email: _email.text.trim(),
           );
+          if (mounted) showAppToast(context, 'Account created successfully!');
           AuthGate.authGateKey.currentState?.markProfileComplete();
         }
         // AuthGate's authStateChanges() stream swaps to AppRoot automatically.
@@ -162,23 +178,24 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() {
       _loading = false;
-      _message = err ?? 'Password reset email sent — check your inbox.';
-      _messageIsError = err != null;
     });
+    if (err != null) {
+      _showError(err);
+    } else {
+      showAppToast(context, 'Password reset email sent — check your inbox.');
+    }
   }
 
   Future<void> _signInWithGoogle() async {
     setState(() {
       _loading = true;
-      _message = null;
     });
     final err = await _auth.signInWithGoogle();
     if (!mounted) return;
     setState(() {
       _loading = false;
-      _message = err;
-      _messageIsError = true;
     });
+    if (err != null) _showError(err);
   }
 
   @override
@@ -317,15 +334,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         onSubmitted: (_) => _submit(),
                       ),
                     ],
-                    if (_message != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        _message!,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: _messageIsError ? c.red : c.green),
-                      ),
-                    ],
                     const SizedBox(height: 18),
                     SizedBox(
                       height: 46,
@@ -351,7 +359,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     fontSize: 15, fontWeight: FontWeight.w600)),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     if (!_isRegister)
                       TextButton(
                         onPressed: _loading ? null : _forgotPassword,
@@ -367,7 +375,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       Expanded(child: Divider(color: c.border)),
                     ]),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     SizedBox(
                       height: 50,
                       child: ElevatedButton(
@@ -393,13 +401,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ]),
                       ),
                     ),
-                    const Divider(height: 20),
+                   // const Divider(height: 0),
                     TextButton(
                       onPressed: _loading
                           ? null
                           : () => setState(() {
                                 _isRegister = !_isRegister;
-                                _message = null;
                               }),
                       child: Text(
                         _isRegister

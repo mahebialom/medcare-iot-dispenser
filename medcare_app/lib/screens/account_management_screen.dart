@@ -6,6 +6,7 @@ import '../config.dart';
 import '../services/firebase_service.dart';
 import '../services/push_notification_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_toast.dart';
 
 /// "Account Management" — shown inside the side-menu's Account
 /// Management destination. Same "Your Account" card layout as
@@ -73,10 +74,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     final online = await _isOnline();
     if (!online) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                "Can't delete account while offline — please connect and try again.")),
+      showAppToast(
+        context,
+        "Can't delete account while offline — please connect and try again.",
+        isError: true,
       );
       return;
     }
@@ -98,6 +99,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       await user.delete();
 
       if (!mounted) return;
+      AuthGate.authGateKey.currentState
+          ?.setPendingLoginMessage('Account deleted successfully.');
       AuthGate.authGateKey.currentState?.forceSignedOutAfterDeletion();
       // Both the side-menu overlay and this Account Management page were
       // pushed on the ROOT Navigator (see side_menu.dart's _openFullScreen)
@@ -112,13 +115,11 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       final msg = e.code == 'requires-recent-login'
           ? 'For security, please sign out and sign in again, then retry deleting your account.'
           : 'Could not delete account — please try again.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      showAppToast(context, msg, isError: true);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Something went wrong. Please try again.')),
-      );
+      showAppToast(context, 'Something went wrong. Please try again.',
+          isError: true);
     } finally {
       if (mounted) setState(() => _deleting = false);
     }

@@ -106,6 +106,16 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     _emailRegistrationInProgress = false;
   }
 
+    // One-shot message handed off by another screen just before it
+  // signs the user out — e.g. AccountManagementScreen after a
+  // successful account deletion — so LoginScreen can show a toast
+  // once it mounts. Consumed and cleared by LoginScreen's initState().
+  String? pendingLoginMessage;
+
+  void setPendingLoginMessage(String message) {
+    pendingLoginMessage = message;
+  }
+
   // True while the profile check is pending AND we should keep
   // showing LoginScreen (not Splash) during that gap — see the
   // SPLASH-FLASH FIX note above.
