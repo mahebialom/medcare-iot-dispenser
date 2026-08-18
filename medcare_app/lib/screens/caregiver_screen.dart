@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../auth_gate.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_toast.dart';
 
 class CaregiverScreen extends StatefulWidget {
   const CaregiverScreen({super.key, required this.c});
@@ -30,11 +31,27 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
     );
     if (confirmed != true) return;
 
+    // Set BEFORE calling signOut() — signOut() triggers Firebase's
+    // authStateChanges() practically immediately once it completes,
+    // which is what swaps AuthGate away from this screen to
+    // LoginScreen. Setting the message first guarantees it's already
+    // in place by the time LoginScreen's initState() checks for it.
+    AuthGate.authGateKey.currentState
+        ?.setPendingLoginMessage('Signed out successfully.');
+
     final success = await AuthGate.authGateKey.currentState?.signOut() ?? false;
-    if (!success && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Can't sign out while offline — please connect and try again.")),
-      );
+    if (!success) {
+      // Sign-out didn't actually happen (e.g. offline) — clear the
+      // message we just set so it doesn't wrongly show up on some
+      // later, unrelated visit to LoginScreen.
+      AuthGate.authGateKey.currentState?.pendingLoginMessage = null;
+      if (context.mounted) {
+        showAppToast(
+          context,
+          "Can't sign out while offline — please connect and try again.",
+          isError: true,
+        );
+      }
     }
   }
 

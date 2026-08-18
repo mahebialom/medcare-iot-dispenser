@@ -75,6 +75,15 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
       );
 
       if (!mounted) return;
+      // Shown once AppRoot mounts, not here — this screen is about to
+      // be swapped away by AuthGate. See the doc comment on
+      // pendingDashboardMessage in auth_gate.dart: this overwrites the
+      // "Signed in successfully!" message the Google sign-in step set
+      // earlier (still unconsumed, since AppRoot never mounted for a
+      // first-time user until now), so exactly one toast shows for the
+      // one real completed action.
+      AuthGate.authGateKey.currentState
+          ?.setPendingDashboardMessage('Profile created successfully!');
       AuthGate.authGateKey.currentState?.markProfileComplete();
     } catch (_) {
       if (!mounted) return;

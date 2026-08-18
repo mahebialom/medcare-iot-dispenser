@@ -116,6 +116,25 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     pendingLoginMessage = message;
   }
 
+  // Same idea, but for messages meant to show once the user LANDS ON
+  // THE DASHBOARD instead — sign-in (either method), signup, and
+  // username creation all set this right before AuthGate swaps away
+  // from whatever screen collected the action. Consumed and cleared
+  // by AppRoot's _ShellState.initState().
+  //
+  // A first-time Google sign-in sets this to a "signed in" message,
+  // then routes to UsernameSetupScreen (not AppRoot) — that message
+  // sits unconsumed until UsernameSetupScreen overwrites it with its
+  // own "username created" message right before AppRoot finally
+  // mounts. Net effect: exactly one toast for the one real completed
+  // action, never a leftover "signed in" toast for a user who hasn't
+  // finished setup yet.
+  String? pendingDashboardMessage;
+
+  void setPendingDashboardMessage(String message) {
+    pendingDashboardMessage = message;
+  }
+
   // True while the profile check is pending AND we should keep
   // showing LoginScreen (not Splash) during that gap — see the
   // SPLASH-FLASH FIX note above.

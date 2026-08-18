@@ -144,13 +144,23 @@ class _LoginScreenState extends State<LoginScreen> {
             username: username,
             email: _email.text.trim(),
           );
-          if (mounted) showAppToast(context, 'Account created successfully!');
+          // Shown once AppRoot mounts, not here — this screen is about
+          // to be swapped away by AuthGate, so a toast fired directly
+          // on this context could get cut off mid-fade. See
+          // pendingDashboardMessage's doc comment in auth_gate.dart.
+          AuthGate.authGateKey.currentState
+              ?.setPendingDashboardMessage('Account created successfully!');
           AuthGate.authGateKey.currentState?.markProfileComplete();
         }
         // AuthGate's authStateChanges() stream swaps to AppRoot automatically.
       } else {
         final err = await _auth.signIn(_email.text, _password.text);
-        if (err != null) _showError(err);
+        if (err != null) {
+          _showError(err);
+        } else {
+          AuthGate.authGateKey.currentState
+              ?.setPendingDashboardMessage('Signed in successfully!');
+        }
       }
     } catch (e) {
       // Anything unexpected (permission-denied from a rules mismatch,
@@ -170,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _forgotPassword() async {
     if (_email.text.trim().isEmpty) {
-      _showError('Enter your email above first, then tap "Forgot password".');
+      _showError('Enter your email first');
       return;
     }
     setState(() => _loading = true);
@@ -195,7 +205,17 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = false;
     });
-    if (err != null) _showError(err);
+    if (err != null) {
+      _showError(err);
+    } else {
+      // See the doc comment on pendingDashboardMessage in
+      // auth_gate.dart — for a first-time Google user this message
+      // sits unconsumed until UsernameSetupScreen overwrites it with
+      // its own "username created" message, so only one toast ever
+      // shows for the one real completed action.
+      AuthGate.authGateKey.currentState
+          ?.setPendingDashboardMessage('Signed in successfully!');
+    }
   }
 
   @override
@@ -401,7 +421,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ]),
                       ),
                     ),
-                   // const Divider(height: 0),
+                    // const Divider(height: 0),
                     TextButton(
                       onPressed: _loading
                           ? null

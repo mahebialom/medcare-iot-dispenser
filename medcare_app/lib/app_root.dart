@@ -14,6 +14,8 @@ import 'screens/caregiver_screen.dart';
 import 'screens/settings_screen.dart';
 import 'widgets/side_menu.dart';
 import 'widgets/status_bar_style.dart';
+import 'widgets/app_toast.dart';
+import 'auth_gate.dart';
 
 const _tabLabels = ['Dashboard', 'Tray', 'Schedule', 'History', 'Caregiver'];
 const _tabIcons = ['⬡', '⟳', '⏰', '📋', '👥'];
@@ -126,6 +128,28 @@ class _ShellState extends State<_Shell> {
   // animation and reset scroll position on every notifyListeners().
   late final PageController _pageController =
       PageController(initialPage: context.read<AppState>().activeTab);
+
+  @override
+  void initState() {
+    super.initState();
+    // A one-shot message left for us by whatever screen just got the
+    // user HERE — sign-in (either method), signup, or username
+    // creation all set this right before AuthGate swaps to AppRoot.
+    // Consumed and cleared immediately so it can never show twice. See
+    // the doc comment on pendingDashboardMessage in auth_gate.dart for
+    // how a first-time Google sign-in's message gets correctly
+    // overwritten by the username-creation message instead of both
+    // showing.
+    final pending = AuthGate.authGateKey.currentState?.pendingDashboardMessage;
+    if (pending != null) {
+      AuthGate.authGateKey.currentState?.pendingDashboardMessage = null;
+      // Deferred to after the first frame — a live Overlay/context for
+      // the toast isn't guaranteed to be ready mid-initState().
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showAppToast(context, pending);
+      });
+    }
+  }
 
   @override
   void dispose() {
