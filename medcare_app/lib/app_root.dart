@@ -445,7 +445,7 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: c.cardBg.withOpacity(0.35),
+            color: c.cardBg.withOpacity(0.45),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: DraggableScrollableSheet(
@@ -460,7 +460,7 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
                 Padding(
                   padding: const EdgeInsets.only(top: 12, bottom: 0),
                   child: Container(
-                    width: 60,
+                    width: 70,
                     height: 6,
                     decoration: BoxDecoration(
                       color: c.muted.withOpacity(0.5),
@@ -468,22 +468,46 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Notifications',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: c.ink)),
-                        IconButton(
-                          icon: Icon(Icons.close, color: c.muted),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                      ]),
+                Transform.translate(
+                  offset: const Offset(0, -7),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 0, 4),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Notifications',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: c.ink)),
+                          Transform.translate(
+                            offset: const Offset(-7, -1),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => Navigator.of(ctx).pop(),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: c.red.withOpacity(0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    color: c.red,
+                                    size: 23,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ]),
+                  ),
                 ),
+
                 Expanded(
                   child: items.isEmpty
                       ? Center(

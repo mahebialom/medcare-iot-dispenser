@@ -130,10 +130,10 @@ class _ToastWidgetState extends State<_ToastWidget>
                     maxWidth: MediaQuery.of(context).size.width * 0.82,
                   ),
                   padding: const EdgeInsets.only(
-                    left: 8,
-                    right: 8,
-                    top: 4,
-                    bottom: 4,
+                    left: 10,
+                    right: 10,
+                    top: 8,
+                    bottom: 8,
                   ),
                   decoration: BoxDecoration(
                     // Mostly-opaque white blended with a touch of the
@@ -146,7 +146,7 @@ class _ToastWidgetState extends State<_ToastWidget>
                     ).withOpacity(0.96),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
-                      color: accent.withOpacity(0.28),
+                      color: accent.withOpacity(0.15),
                       width: 1.2,
                     ),
                     boxShadow: [

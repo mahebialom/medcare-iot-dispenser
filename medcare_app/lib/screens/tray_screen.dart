@@ -93,9 +93,9 @@ class _TrayScreenState extends State<TrayScreen> with SingleTickerProviderStateM
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Expanded(
             child: Transform.translate(
-              offset: const Offset(0, -8), // <-- Move text slightly UP
+              offset: const Offset(0, -16.5), // <-- Move text slightly UP
               child: Text(
-                'CIRCULAR TRAY — 5 COMPARTMENTS',
+                'CIRCULAR TRAY · 5 COMPARTMENTS',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: c.muted),
               ),
           ),
@@ -165,8 +165,8 @@ class _TrayScreenState extends State<TrayScreen> with SingleTickerProviderStateM
         const SizedBox(height: 8),
         Text(
           busy
-              ? 'Device is ${app.status.mode == 'refill' ? 'in refill mode' : 'busy'} — try again shortly'
-              : 'Tap a compartment, or a slot below, to dispense',
+              ? 'Device is ${app.status.mode == 'refill' ? 'in refill mode' : 'busy'}. Try again shortly'
+              : 'Tap a compartment or a slot to force dispense',
           style: TextStyle(fontSize: 11, color: c.muted),
         ),
         const SizedBox(height: 8),
