@@ -260,7 +260,7 @@ GND         │  Common ground          │  All GND tied together
 
 The dispenser holds 5 medicine slots on a single rotating tray, driven by a stepper motor. Only one slot is ever open at a time — the tray rotates a fixed number of steps to bring the next due slot under a stationary lid and sensor assembly.
 
-![Tray rotation mechanism](pic/tray-rotation.svg)
+![Tray rotation mechanism](doc/tray-rotation.svg)
 
 ### Compartment Notch Detection
 
@@ -277,7 +277,7 @@ Steps per compartment with 28BYJ-48 in half-step mode:
 
 <br><br>
 
-![Lid and sensor cross-section](pic/lid-sensor.svg)
+![Lid and sensor cross-section](doc/lid-sensor.svg)
 
 
 
