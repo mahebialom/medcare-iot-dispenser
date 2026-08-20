@@ -37,7 +37,7 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
     // LoginScreen. Setting the message first guarantees it's already
     // in place by the time LoginScreen's initState() checks for it.
     AuthGate.authGateKey.currentState
-        ?.setPendingLoginMessage('Signed out successfully.');
+        ?.setPendingLoginMessage('Signed out successfully');
 
     final success = await AuthGate.authGateKey.currentState?.signOut() ?? false;
     if (!success) {
@@ -48,7 +48,7 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
       if (context.mounted) {
         showAppToast(
           context,
-          "Can't sign out while offline — please connect and try again.",
+          "Can't sign out while offline. Connect to the internet and try again",
           isError: true,
         );
       }
@@ -237,7 +237,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
 
     if (_fullName.text.trim().isEmpty) {
       setState(() {
-        _message = 'Full name cannot be empty.';
+        _message = 'Full name is required';
         _messageIsError = true;
       });
       return;
@@ -245,14 +245,14 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     if (_newPassword.text.isNotEmpty) {
       if (_newPassword.text != _confirmPassword.text) {
         setState(() {
-          _message = 'Passwords do not match.';
+          _message = 'Passwords do not match';
           _messageIsError = true;
         });
         return;
       }
       if (_newPassword.text.length < 6) {
         setState(() {
-          _message = 'Password should be at least 6 characters.';
+          _message = 'Password must be at least 6 characters';
           _messageIsError = true;
         });
         return;
@@ -282,8 +282,8 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       final msg = e.code == 'requires-recent-login'
-          ? 'For security, please sign out and back in before changing your password.'
-          : 'Could not save changes — please try again.';
+          ? 'For security reason, sign in again before changing your password'
+          : 'Could not save changes. Please try again';
       setState(() {
         _message = msg;
         _messageIsError = true;
@@ -291,7 +291,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _message = 'Something went wrong. Please try again.';
+        _message = 'Something went wrong. Please try again';
         _messageIsError = true;
       });
     } finally {
@@ -340,7 +340,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
           ),
         ),
         const SizedBox(height: 6),
-        Text("Email and username can't be changed here.", style: TextStyle(fontSize: 11, color: c.muted)),
+        Text("Email and username can't be changed", style: TextStyle(fontSize: 11, color: c.muted)),
         const SizedBox(height: 18),
         TextField(
           controller: _newPassword,

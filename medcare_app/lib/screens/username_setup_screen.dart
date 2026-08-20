@@ -46,7 +46,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
     final username = _username.text.trim();
     if (!RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(username)) {
       setState(() {
-        _message = 'Username must be 3-20 characters — letters, numbers, underscore only.';
+        _message = 'Username must be 3-20 characters, letters, numbers, and underscores only';
         _messageIsError = true;
       });
       return;
@@ -61,7 +61,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
       final taken = await _firebase.isUsernameTaken(username);
       if (taken) {
         setState(() {
-          _message = 'That username is already taken — try another.';
+          _message = 'Username is already taken. Try another';
           _messageIsError = true;
         });
         return;
@@ -83,12 +83,12 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
       // first-time user until now), so exactly one toast shows for the
       // one real completed action.
       AuthGate.authGateKey.currentState
-          ?.setPendingDashboardMessage('Profile created successfully!');
+          ?.setPendingDashboardMessage('Profile created successfully');
       AuthGate.authGateKey.currentState?.markProfileComplete();
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _message = 'Something went wrong. Please try again.';
+        _message = 'Something went wrong. Please try again';
         _messageIsError = true;
       });
     } finally {
@@ -141,7 +141,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Pick a username to finish setting up your caregiver account',
+                    'Choose a username for your caregiver account',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, color: c.muted),
                   ),
@@ -165,7 +165,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Username',
                       prefixIcon: Icon(Icons.alternate_email),
-                      helperText: 'Letters, numbers, underscore — 3 to 20 characters',
+                      helperText: 'Letters, numbers, underscore,3 to 20 characters',
                       helperMaxLines: 2,
                     ),
                     onSubmitted: (_) => _submit(),

@@ -78,23 +78,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
-      _showError('Enter both email and password.');
+      _showError('Enter both email and password');
       return;
     }
 
     if (_isRegister) {
       if (_fullName.text.trim().isEmpty) {
-        _showError('Enter your full name.');
+        _showError('Enter your full name');
         return;
       }
       final username = _username.text.trim();
       if (!RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(username)) {
         _showError(
-            'Username must be 3-20 characters — letters, numbers, underscore only.');
+            'Username must be 3-20 characters & contain letters, numbers, underscore only');
         return;
       }
       if (_password.text != _confirmPassword.text) {
-        _showError('Passwords do not match.');
+        _showError('Passwords do not match');
         return;
       }
     }
@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final taken = await _firebase.isUsernameTaken(username);
         if (taken) {
-          _showError('That username is already taken.');
+          _showError('Username is already taken');
           return;
         }
 
@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
           // on this context could get cut off mid-fade. See
           // pendingDashboardMessage's doc comment in auth_gate.dart.
           AuthGate.authGateKey.currentState
-              ?.setPendingDashboardMessage('Account created successfully!');
+              ?.setPendingDashboardMessage('Account created successfully');
           AuthGate.authGateKey.currentState?.markProfileComplete();
         }
         // AuthGate's authStateChanges() stream swaps to AppRoot automatically.
@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _showError(err);
         } else {
           AuthGate.authGateKey.currentState
-              ?.setPendingDashboardMessage('Signed in successfully!');
+              ?.setPendingDashboardMessage('Signed in successfully');
         }
       }
     } catch (e) {
@@ -168,9 +168,9 @@ class _LoginScreenState extends State<LoginScreen> {
       // button stuck spinning forever with no feedback.
       if (e is TimeoutException) {
         _showError(
-            'No internet connection. Please check your connection and try again later.');
+            'No internet connection. Try again');
       } else {
-        _showError('Something went wrong. Please try again later.');
+        _showError('Something went wrong. Try again later');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -192,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (err != null) {
       _showError(err);
     } else {
-      showAppToast(context, 'Password reset email sent — check your inbox.');
+      showAppToast(context, 'Password reset email sent. Check your inbox');
     }
   }
 
@@ -214,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // its own "username created" message, so only one toast ever
       // shows for the one real completed action.
       AuthGate.authGateKey.currentState
-          ?.setPendingDashboardMessage('Signed in successfully!');
+          ?.setPendingDashboardMessage('Signed in successfully');
     }
   }
 
@@ -301,9 +301,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Username',
                           prefixIcon: Icon(Icons.alternate_email),
-                          helperText:
-                              'Letters, numbers, underscore — 3 to 20 characters',
-                          helperMaxLines: 2,
+                          // helperText:
+                          //     'Letters, numbers, underscore — 3 to 20 characters',
+                          // helperMaxLines: 2,
                         ),
                       ),
                     ],

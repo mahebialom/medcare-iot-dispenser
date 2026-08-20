@@ -4,6 +4,10 @@ import '../screens/settings_screen.dart';
 import '../theme/app_colors.dart';
 import 'status_bar_style.dart';
 import '../screens/account_management_screen.dart';
+import '../screens/privacy_policy_screen.dart';
+import '../screens/about_screen.dart';
+import '../screens/app_settings_screen.dart';
+import '../main.dart';
 
 /// Right-side sliding menu — opened from the header's hamburger icon
 /// (replaces the old single settings-gear button). Slides in from the
@@ -62,6 +66,37 @@ class _SideMenuOverlayState extends State<_SideMenuOverlay> {
   // adjust this fraction if you want the panel wider/narrower.
   static const _panelWidthFraction = 0.70;
 
+  // Swipe-to-close tuning. Dragging the panel RIGHTWARD (toward where
+  // it slides out to) by more than this FRACTION of the panel's own
+  // width closes it, even on a slow drag. A fast rightward flick
+  // closes it regardless of distance travelled if it clears the
+  // velocity threshold — matches how native side-menus feel (a quick
+  // flick dismisses even with barely any travel).
+  static const _closeDistanceFraction = 0.30;
+  static const _closeFlingVelocity = 400.0; // logical px/sec, rightward
+
+  // Cumulative rightward drag distance for the CURRENT gesture only —
+  // reset to 0 at the end of every drag (successful or not). Leftward
+  // movement still accumulates (as a negative number) and simply never
+  // clears the positive threshold, so dragging left does nothing,
+  // exactly like today.
+  double _dragExtent = 0;
+
+  void _handleHorizontalDragUpdate(DragUpdateDetails details) {
+    _dragExtent += details.delta.dx;
+  }
+
+  void _handleHorizontalDragEnd(DragEndDetails details) {
+    final panelWidth = MediaQuery.of(context).size.width * _panelWidthFraction;
+    final velocity = details.primaryVelocity ?? 0;
+    final draggedFarEnough = _dragExtent > panelWidth * _closeDistanceFraction;
+    final flungRight = velocity > _closeFlingVelocity;
+    _dragExtent = 0;
+    if (draggedFarEnough || flungRight) {
+      _closeMenu();
+    }
+  }
+
   /// Closes the WHOLE overlay — the outer route this widget belongs
   /// to. `context` here is this State's own context, whose nearest
   /// Navigator ancestor is the app's main Navigator (the inner one is
@@ -107,36 +142,48 @@ class _SideMenuOverlayState extends State<_SideMenuOverlay> {
                   curve: Curves.easeOutCubic,
                   reverseCurve: Curves.easeInCubic),
             ),
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  width: panelWidth,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    color: c.cardBg.withOpacity(0.45),
-                    border: Border(
-                        left: BorderSide(color: c.border.withOpacity(0.4))),
-                  ),
-                  // Material ancestor required by ListTile (used inside
-                  // _MenuTile) — transparency type so it doesn't paint
-                  // its own opaque background over the blur/tint set
-                  // above on the Container.
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: SafeArea(
-                      // NESTED Navigator — still used for the menu list
-                      // itself (its single initial route). Destination
-                      // screens (Settings, Account Management, etc.) no
-                      // longer push onto this one — see
-                      // _SideMenuContent._openFullScreen() below.
-                      child: Navigator(
-                        key: _innerNavKey,
-                        onGenerateRoute: (settings) => MaterialPageRoute(
-                          builder: (_) => _SideMenuContent(
-                            c: c,
-                            isDark: isDark,
-                            onCloseMenu: _closeMenu,
+            // Swipe-right-to-close: wraps the whole panel so a drag
+            // starting anywhere on it (including over the menu list)
+            // is recognized. GestureDetector's horizontal drag axis
+            // doesn't conflict with the ListView inside — that scrolls
+            // vertically, so Flutter's gesture arena resolves them
+            // independently rather than competing for the same
+            // gesture.
+            child: GestureDetector(
+              onHorizontalDragUpdate: _handleHorizontalDragUpdate,
+              onHorizontalDragEnd: _handleHorizontalDragEnd,
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    width: panelWidth,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      color: c.cardBg.withOpacity(0.45),
+                      border: Border(
+                          left: BorderSide(color: c.border.withOpacity(0.4))),
+                    ),
+                    // Material ancestor required by ListTile (used
+                    // inside _MenuTile) — transparency type so it
+                    // doesn't paint its own opaque background over the
+                    // blur/tint set above on the Container.
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: SafeArea(
+                        // NESTED Navigator — still used for the menu
+                        // list itself (its single initial route).
+                        // Destination screens (Settings, Account
+                        // Management, etc.) no longer push onto this
+                        // one — see _SideMenuContent._openFullScreen()
+                        // below.
+                        child: Navigator(
+                          key: _innerNavKey,
+                          onGenerateRoute: (settings) => MaterialPageRoute(
+                            builder: (_) => _SideMenuContent(
+                              c: c,
+                              isDark: isDark,
+                              onCloseMenu: _closeMenu,
+                            ),
                           ),
                         ),
                       ),
@@ -216,8 +263,7 @@ class _SideMenuContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          color: c.cardBg.withOpacity(
-              0.2), // slightly different tint than the panel behind it
+          color: c.cardBg.withOpacity(0), // slightly different tint than the panel behind it
           padding: const EdgeInsets.fromLTRB(16, 12, 8, 10),
           child: Row(
             children: [
@@ -261,7 +307,7 @@ class _SideMenuContent extends StatelessWidget {
                       title: 'Settings',
                       c: c,
                       isDark: isDark,
-                      body: _ComingSoonBody(c: c, icon: Icons.tune_outlined)),
+                      body: AppSettingsScreen(c: c)),
                 ),
               ),
               _MenuTile(
@@ -300,8 +346,7 @@ class _SideMenuContent extends StatelessWidget {
                       title: 'Privacy Policy',
                       c: c,
                       isDark: isDark,
-                      body: _ComingSoonBody(
-                          c: c, icon: Icons.privacy_tip_outlined)),
+                      body: PrivacyPolicyScreen(c: c)),
                 ),
               ),
               _MenuTile(
@@ -314,7 +359,7 @@ class _SideMenuContent extends StatelessWidget {
                       title: 'About',
                       c: c,
                       isDark: isDark,
-                      body: _ComingSoonBody(c: c, icon: Icons.info_outline)),
+                      body: AboutScreen(c: c)),
                 ),
               ),
             ],
@@ -323,7 +368,7 @@ class _SideMenuContent extends StatelessWidget {
         //Divider(color: c.border, height: 1),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Text('App Version 1.0.0',
+          child: Text('App Version ${appPackageInfo.version}',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11, color: c.muted)),
         ),

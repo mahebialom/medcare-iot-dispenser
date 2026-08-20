@@ -53,8 +53,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete account permanently?'),
         content: const Text(
-          'This permanently deletes your sign-in access, username, and email, '
-          'and removes this device from push notifications. This cannot be undone.',
+          'This will permanently delete your sign-in access, username, and email. This cannot be undone.'
         ),
         actions: [
           TextButton(
@@ -76,7 +75,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       if (!mounted) return;
       showAppToast(
         context,
-        "Can't delete account while offline — please connect and try again.",
+        "Can’t delete account while offline. Connect to the internet and try again",
         isError: true,
       );
       return;
@@ -100,7 +99,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
       if (!mounted) return;
       AuthGate.authGateKey.currentState
-          ?.setPendingLoginMessage('Account deleted successfully.');
+          ?.setPendingLoginMessage('Account deleted successfully');
       AuthGate.authGateKey.currentState?.forceSignedOutAfterDeletion();
       // Both the side-menu overlay and this Account Management page were
       // pushed on the ROOT Navigator (see side_menu.dart's _openFullScreen)
@@ -113,12 +112,12 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       final msg = e.code == 'requires-recent-login'
-          ? 'For security, please sign out and sign in again, then retry deleting your account.'
-          : 'Could not delete account — please try again.';
+          ? 'For security reason, sign in again before deleting your account'
+          : 'Unable to delete account. Try again';
       showAppToast(context, msg, isError: true);
     } catch (_) {
       if (!mounted) return;
-      showAppToast(context, 'Something went wrong. Please try again.',
+      showAppToast(context, 'Something went wrong. Please try again',
           isError: true);
     } finally {
       if (mounted) setState(() => _deleting = false);
@@ -149,8 +148,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: c.panel,
-            border: Border.all(color: c.border),
+            color: c.green.withOpacity(0.15),
+            border: Border.all(color: c.green.withOpacity(0.4)),
             borderRadius: BorderRadius.circular(14),
           ),
           child:

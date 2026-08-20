@@ -20,8 +20,17 @@ import '../models/app_notification.dart';
 /// has no web implementation. Calls here are guarded with kIsWeb so the
 /// rest of the app still works fine when run in Chrome for testing
 /// other features.
+///
+/// PUSH ENABLE/DISABLE TOGGLE: [pushEnabled] (see below) controls ONLY
+/// whether the OS-level banner/sound fires — it never affects history.
+/// addIfNew() always records to history and always returns/notifies
+/// listeners the same way regardless of this flag; only the
+/// _plugin.show() call is gated by it. Persisted per signed-in uid
+/// (same pattern as history), since this is a shared device and
+/// different caregivers may want this on or off independently.
 class NotificationService extends ChangeNotifier {
   static const _prefsKeyPrefix = 'medcare_notifications_v1_';
+  static const _pushEnabledKeyPrefix = 'medcare_push_enabled_';
   // Read by firebaseMessagingBackgroundHandler (a separate, fresh Dart
   // isolate with no access to this running instance) so it can figure
   // out which user's history to write to. Kept in sync on every
@@ -35,9 +44,11 @@ class NotificationService extends ChangeNotifier {
   final Set<String> _seenIds = {};
   bool _platformInitialized = false;
   String? _uid;
+  bool _pushEnabled = true;
 
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
   int get unreadCount => _notifications.where((n) => !n.read).length;
+  bool get pushEnabled => _pushEnabled;
 
   /// Reads the last-known signed-in uid — used by
   /// firebaseMessagingBackgroundHandler, a separate isolate with no
@@ -45,6 +56,17 @@ class NotificationService extends ChangeNotifier {
   static Future<String?> readCurrentUid() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_currentUidKey);
+  }
+
+  /// Reads whether PUSH BANNERS (not history) are enabled for [uid] —
+  /// used by firebaseMessagingBackgroundHandler, the same separate
+  /// isolate readCurrentUid() serves, for the same reason (no access
+  /// to a running NotificationService instance's in-memory
+  /// _pushEnabled). Defaults to true (enabled) if never explicitly set
+  /// by that user.
+  static Future<bool> readPushEnabledForUid(String uid) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('$_pushEnabledKeyPrefix$uid') ?? true;
   }
 
   /// Persists a notification to history from the BACKGROUND isolate —
@@ -55,8 +77,10 @@ class NotificationService extends ChangeNotifier {
   /// list fresh, dedupe against IT (not in-memory _seenIds, which
   /// doesn't exist here), cap, and save back. The OS-level banner
   /// itself is shown separately by firebaseMessagingBackgroundHandler
-  /// using its own FlutterLocalNotificationsPlugin instance — this
-  /// method only handles history persistence.
+  /// (gated by readPushEnabledForUid(), NOT by this method) using its
+  /// own FlutterLocalNotificationsPlugin instance — this method only
+  /// ever handles history persistence, unconditionally, regardless of
+  /// the push-enabled preference.
   static Future<void> addIfNewBackground({
     required String uid,
     required String id,
@@ -149,6 +173,9 @@ class NotificationService extends ChangeNotifier {
   /// read/unread state on that device. Each uid now gets its own
   /// persisted history, loaded fresh whenever the signed-in user
   /// changes.
+  ///
+  /// Also loads that uid's push-enabled preference (see
+  /// _loadPushEnabled()) — same per-user scoping, same reasoning.
   Future<void> loadForUser(String? uid) async {
     if (uid == _uid) return; // no actual change — avoid redundant reloads
     _uid = uid;
@@ -158,6 +185,7 @@ class NotificationService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     if (uid == null) {
       await prefs.remove(_currentUidKey);
+      _pushEnabled = true; // no signed-in user — back to the default
       notifyListeners();
       return;
     }
@@ -165,7 +193,27 @@ class NotificationService extends ChangeNotifier {
 
     await _migrateLegacyHistoryIfPresent(uid);
     await _load();
+    await _loadPushEnabled();
     notifyListeners();
+  }
+
+  Future<void> _loadPushEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    _pushEnabled = prefs.getBool('$_pushEnabledKeyPrefix$_uid') ?? true;
+  }
+
+  /// Toggles whether PUSH BANNERS show for future notifications.
+  /// History (the in-app Notifications list / History tab) is NEVER
+  /// affected by this — addIfNew() always records history regardless
+  /// of this setting; this only gates the OS-level banner/sound call
+  /// inside it. Persisted per signed-in user, same as history, so a
+  /// shared device lets each caregiver choose independently.
+  Future<void> setPushEnabled(bool enabled) async {
+    if (_uid == null) return; // no signed-in user to own this preference
+    _pushEnabled = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('$_pushEnabledKeyPrefix$_uid', enabled);
   }
 
   /// One-time recovery for history saved before per-user storage
@@ -217,6 +265,15 @@ class NotificationService extends ChangeNotifier {
   /// essential here, since the same underlying Firebase event can
   /// otherwise re-trigger this every time the stream re-emits (which
   /// happens more often than "this is genuinely new").
+  ///
+  /// History (insert, cap, persist, notifyListeners) ALWAYS happens
+  /// regardless of [pushEnabled] — only the OS-level banner/sound call
+  /// at the end is gated by it. This is the single point of control
+  /// for "act only on push notification, but save everything to
+  /// history" for the FOREGROUND path (background/killed-app path is
+  /// firebaseMessagingBackgroundHandler in push_notification_service.dart,
+  /// gated separately via readPushEnabledForUid() since it has no
+  /// access to this running instance).
   Future<void> addIfNew({
     required String id,
     required AppNotificationType type,
@@ -240,7 +297,7 @@ class NotificationService extends ChangeNotifier {
     notifyListeners();
     await _persist();
 
-    if (!kIsWeb) {
+    if (!kIsWeb && _pushEnabled) {
       await _plugin.show(
         id.hashCode,
         title,

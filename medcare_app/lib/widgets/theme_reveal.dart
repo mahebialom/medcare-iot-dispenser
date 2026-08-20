@@ -22,6 +22,18 @@ class _CircleRevealClipper extends CustomClipper<Path> {
 /// call `revealKey.currentState?.reveal(globalPosition)` from wherever
 /// your theme-toggle button lives.
 ///
+/// DIRECTIONAL BEHAVIOR: switching TO dark and switching BACK to light
+/// are visually opposite, not mirror-identical animations of the same
+/// "grow a circle" motion:
+///   - Light → Dark: the NEW (dark) theme grows as an expanding circle
+///     from the tap point, over the OLD (light) theme underneath.
+///   - Dark → Light: the NEW (light) theme is committed as the base
+///     IMMEDIATELY, and the OLD (dark) theme instead shrinks away as a
+///     contracting circle, revealing the light base underneath as it
+///     recedes. This is the true reverse of the expand — without this
+///     branch, both directions look identical (always "spread out"),
+///     which is the bug this fixes.
+///
 /// Persists the chosen theme to disk (SharedPreferences) so it survives
 /// an app restart — `isDark` passed in is only the fallback used before
 /// the saved value has loaded (or if this is the first-ever launch).
@@ -39,13 +51,19 @@ class ThemeRevealState extends State<ThemeReveal> with SingleTickerProviderState
   Offset? _origin;
   double _maxRadius = 0;
 
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 480),
+    duration: const Duration(milliseconds: 500),
   );
   late final Animation<double> _radius = CurvedAnimation(
     parent: _controller,
-    curve: Curves.easeInOutCubic,
+    // easeOutCubic: fast start, gentle settle — reads smoother than a
+    // symmetric ease-in-out for an expanding/contracting circle like
+    // this. Applies to both forward (grow) and reverse (shrink) since
+    // no separate reverseCurve is set — Flutter runs the same curve
+    // shape whichever direction the controller is moving.
+    curve: Curves.easeOutCubic,
   );
 
   @override
@@ -76,20 +94,49 @@ class ThemeRevealState extends State<ThemeReveal> with SingleTickerProviderState
     final size = box.size;
     final dx = math.max(local.dx, size.width - local.dx);
     final dy = math.max(local.dy, size.height - local.dy);
-    setState(() {
-      _origin = local;
-      _maxRadius = math.sqrt(dx * dx + dy * dy);
-    });
-    _controller.forward(from: 0).whenComplete(() {
-      if (!mounted) return;
-      final next = !_isDark;
+    final maxRadius = math.sqrt(dx * dx + dy * dy);
+
+    final goingDark = !_isDark;
+
+    if (goingDark) {
+      // Light → Dark: unchanged from before — overlay is the NEW
+      // (dark) theme, growing from 0 up to maxRadius over the OLD
+      // (light) base underneath. The theme is only committed once the
+      // animation finishes.
       setState(() {
-        _isDark = next; // commit the theme once the wipe finishes
-        _controller.value = 0;
-        _origin = null;
+        _origin = local;
+        _maxRadius = maxRadius;
       });
-      _persistTheme(next);
-    });
+      _controller.forward(from: 0).whenComplete(() {
+        if (!mounted) return;
+        setState(() {
+          _isDark = true; // commit the theme once the wipe finishes
+          _controller.value = 0;
+          _origin = null;
+        });
+        _persistTheme(true);
+      });
+    } else {
+      // Dark → Light: commit the NEW (light) theme as the base RIGHT
+      // NOW — no waiting for the animation — then animate the OLD
+      // (dark) theme shrinking away on top of it. As the circle
+      // contracts, more of the already-light base is revealed
+      // underneath, which reads as the exact reverse of the expand
+      // case above rather than another "spread out."
+      setState(() {
+        _origin = local;
+        _maxRadius = maxRadius;
+        _isDark = false; // base swaps to light immediately
+      });
+      _controller.reverse(from: 1).whenComplete(() {
+        if (!mounted) return;
+        setState(() {
+          _controller.value = 0;
+          _origin = null;
+        });
+        _persistTheme(false);
+      });
+    }
   }
 
   @override
@@ -100,8 +147,31 @@ class ThemeRevealState extends State<ThemeReveal> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
+    if (_origin == null) {
+      return widget.builder(context, _isDark);
+    }
+
+    // Forward (growing) case: base is the OLD theme (still !_isDark's
+    // opposite committed value — i.e. _isDark hasn't flipped yet), and
+    // the overlay is the NEW theme, clipped by a circle that grows
+    // with the animation.
+    //
+    // Reverse (shrinking) case: _isDark was ALREADY flipped to the new
+    // value the instant the gesture started (see reveal() above), so
+    // widget.builder(context, _isDark) here is already the NEW (light)
+    // theme — that's the base. The overlay is the OLD (dark) theme,
+    // clipped by a circle that shrinks with the animation, revealing
+    // more of the light base as it recedes.
     final base = widget.builder(context, _isDark);
-    if (_origin == null) return base;
+    // In BOTH cases this correctly resolves to the theme that should
+    // be the shrinking/growing overlay:
+    //   - Forward (growing): _isDark hasn't flipped yet, so !_isDark
+    //     is the NEW theme — correct, that's what should grow in.
+    //   - Reverse (shrinking): _isDark was ALREADY flipped to the new
+    //     value the instant the gesture started (see reveal() above),
+    //     so !_isDark now resolves to the OLD theme — correct, that's
+    //     what should shrink away.
+    final overlayIsDark = !_isDark;
 
     return Stack(children: [
       base,
@@ -111,7 +181,15 @@ class ThemeRevealState extends State<ThemeReveal> with SingleTickerProviderState
           clipper: _CircleRevealClipper(center: _origin!, radius: _radius.value * _maxRadius),
           child: child,
         ),
-        child: IgnorePointer(child: widget.builder(context, !_isDark)),
+        // RepaintBoundary — the clip re-paints every animation tick,
+        // but without this the whole overlay subtree (the entire
+        // themed app: header, tab bar, PageView, etc.) can get pulled
+        // into that same repaint, which is what actually reads as
+        // janky/not-smooth on a heavier screen. This isolates the
+        // clip's repaint cost from everything else.
+        child: RepaintBoundary(
+          child: IgnorePointer(child: widget.builder(context, overlayIsDark)),
+        ),
       ),
     ]);
   }

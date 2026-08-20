@@ -12,12 +12,21 @@ import 'notification_service.dart';
 /// incoming messages through the same NotificationService used for
 /// in-app events.
 ///
-/// Foreground messages call NotificationService.addIfNew() directly.
+/// Foreground messages call NotificationService.addIfNew() directly —
+/// that method ALWAYS records history and gates only the OS banner
+/// internally via its own pushEnabled flag (see notification_service.dart).
+///
 /// Background/killed-app messages are handled by the TOP-LEVEL
 /// firebaseMessagingBackgroundHandler below instead — FCM spins up a
 /// separate, fresh Dart isolate for those, which has no access to the
 /// running app's state (there may be no running app at all), so it
 /// re-initializes Firebase and shows the OS notification directly.
+/// Since it has no access to a running NotificationService instance's
+/// in-memory pushEnabled flag, it reads the persisted preference via
+/// NotificationService.readPushEnabledForUid() instead — same
+/// "history always saved, banner conditionally shown" split as the
+/// foreground path, just implemented via a fresh read instead of an
+/// in-memory field.
 ///
 /// Both paths use the SAME `id` the client-side event/reminder logic
 /// already generates (see AppState), so whichever path processes a
@@ -122,6 +131,15 @@ class PushNotificationService {
 /// one signed in / device shared and nobody currently logged in), we
 /// still show the OS banner but skip history persistence, since there's
 /// no per-user history to own it.
+///
+/// PUSH ENABLE/DISABLE: history persistence above ALWAYS happens
+/// (unconditional on the toggle) — but showing the actual OS banner
+/// below is gated by NotificationService.readPushEnabledForUid(uid),
+/// so a caregiver who's turned push off still gets everything recorded
+/// in their history without seeing/hearing the banner. If uid is null
+/// (no signed-in owner for this device right now), the banner still
+/// shows by default — there's no per-user preference to consult in
+/// that case, and the previous default behavior was to always show it.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -133,18 +151,25 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final typeRaw = data['type'];
 
   final uid = await NotificationService.readCurrentUid();
-  if (uid != null && typeRaw != null) {
-    await NotificationService.addIfNewBackground(
-      uid: uid,
-      id: id,
-      type: AppNotificationType.values.firstWhere(
-        (t) => t.name == typeRaw,
-        orElse: () => AppNotificationType.missed,
-      ),
-      title: title,
-      body: body,
-    );
+  var pushEnabled = true;
+
+  if (uid != null) {
+    if (typeRaw != null) {
+      await NotificationService.addIfNewBackground(
+        uid: uid,
+        id: id,
+        type: AppNotificationType.values.firstWhere(
+          (t) => t.name == typeRaw,
+          orElse: () => AppNotificationType.missed,
+        ),
+        title: title,
+        body: body,
+      );
+    }
+    pushEnabled = await NotificationService.readPushEnabledForUid(uid);
   }
+
+  if (!pushEnabled) return; // history already saved above — banner skipped
 
   final plugin = FlutterLocalNotificationsPlugin();
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');

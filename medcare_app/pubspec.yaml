@@ -1,7 +1,7 @@
 name: medcare_app
 description: MedCare IoT app for visually impaired people to take their medications on time without anyone's help.
 publish_to: 'none'
-version: 1.2.3+1
+version: 1.2.4+1
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -20,6 +20,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   connectivity_plus: ^6.0.5
   flutter_svg: ^2.0.10+1
+  package_info_plus: ^8.1.0
 
 dev_dependencies:
   flutter_test:

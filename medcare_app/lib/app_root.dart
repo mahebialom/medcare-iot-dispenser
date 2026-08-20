@@ -246,7 +246,7 @@ class _ShellState extends State<_Shell> {
                                     ),
                                   ]),
                                   const SizedBox(height: 2),
-                                  Text('${_greeting()}, ${_greetingName()}',
+                                  Text('${_greeting()}\n${_greetingName()}',
                                       style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -481,7 +481,7 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
                                   fontSize: 16,
                                   color: c.ink)),
                           Transform.translate(
-                            offset: const Offset(-7, -1),
+                            offset: const Offset(-10, -1),
                             child: Material(
                               color: Colors.transparent,
                               child: InkWell(
@@ -491,13 +491,13 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
                                   width: 28,
                                   height: 28,
                                   decoration: BoxDecoration(
-                                    color: c.red.withOpacity(0.18),
-                                    shape: BoxShape.circle,
+                                    color: c.muted.withOpacity(0.1),
+                                    shape: BoxShape.rectangle,
                                   ),
                                   alignment: Alignment.center,
                                   child: Icon(
                                     Icons.close_rounded,
-                                    color: c.red,
+                                    color: c.muted,
                                     size: 23,
                                   ),
                                 ),
