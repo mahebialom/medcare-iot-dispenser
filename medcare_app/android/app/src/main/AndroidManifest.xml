@@ -7,9 +7,9 @@
         android:allowBackup="false"
         android:fullBackupContent="false"
 
-        android:label="Medcare IoT"
+        android:label="MedCare IoT"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
             android:exported="true"

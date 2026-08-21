@@ -55,7 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // ── Not-yet-active notice ──
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
             color: c.amberBg,
             border: Border.all(color: c.amberBorder),
@@ -69,9 +69,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: Text(
                   "Wi-Fi and stock settings are saved in the app only for "
-                  "now — your dispenser's firmware doesn't read this "
-                  "config yet. See the setup guide for the firmware "
-                  "addition needed to activate these.",
+                  "now. Dispenser's firmware doesn't read this "
+                  "config yet.",
                   style: TextStyle(fontSize: 12, color: c.amber, height: 1.4),
                 ),
               ),
@@ -83,9 +82,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // ── Wi-Fi Connection ──
         Text('WI-FI CONNECTION',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: c.muted)),
-        const SizedBox(height: 10),
+        const SizedBox(height: 5),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             gradient: c.deviceGrad,
             border: Border.all(color: c.deviceBorder),
@@ -102,7 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 prefixIcon: Icon(Icons.wifi),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 6),
             TextField(
               controller: _password,
               obscureText: _obscurePassword,
@@ -123,9 +122,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // ── Stock Alerts ──
         Text('STOCK ALERTS',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: c.muted)),
-        const SizedBox(height: 10),
+        const SizedBox(height: 5),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             gradient: c.deviceGrad,
             border: Border.all(color: c.deviceBorder),
@@ -151,9 +150,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // ── Device Sync ──
         Text('DEVICE SYNC',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: c.muted)),
-        const SizedBox(height: 10),
+        const SizedBox(height: 5),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             gradient: c.deviceGrad,
             border: Border.all(color: c.deviceBorder),
@@ -187,7 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ]),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
 
         // ── Save / Cancel ──
         // Plain default-sized Material 3 buttons — TextButton for the

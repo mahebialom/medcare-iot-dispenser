@@ -491,14 +491,14 @@ void _showNotifications(BuildContext context, AppState app, AppColors c) {
                                   width: 28,
                                   height: 28,
                                   decoration: BoxDecoration(
-                                    color: c.muted.withOpacity(0.1),
+                                    color: c.muted.withOpacity(0.0),
                                     shape: BoxShape.rectangle,
                                   ),
                                   alignment: Alignment.center,
                                   child: Icon(
                                     Icons.close_rounded,
                                     color: c.muted,
-                                    size: 23,
+                                    size: 26,
                                   ),
                                 ),
                               ),

@@ -54,7 +54,7 @@ class ThemeRevealState extends State<ThemeReveal> with SingleTickerProviderState
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 500),
+    duration: const Duration(milliseconds: 550),
   );
   late final Animation<double> _radius = CurvedAnimation(
     parent: _controller,

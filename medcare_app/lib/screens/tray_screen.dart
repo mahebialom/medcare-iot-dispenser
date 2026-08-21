@@ -162,7 +162,7 @@ class _TrayScreenState extends State<TrayScreen> with SingleTickerProviderStateM
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           busy
               ? 'Device is ${app.status.mode == 'refill' ? 'in refill mode' : 'busy'}. Try again shortly'
