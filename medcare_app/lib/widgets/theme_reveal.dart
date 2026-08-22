@@ -54,16 +54,14 @@ class ThemeRevealState extends State<ThemeReveal> with SingleTickerProviderState
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 550),
+    duration: const Duration(milliseconds: 450), // ← CHANGED from 550 to 350
   );
   late final Animation<double> _radius = CurvedAnimation(
     parent: _controller,
-    // easeOutCubic: fast start, gentle settle — reads smoother than a
-    // symmetric ease-in-out for an expanding/contracting circle like
-    // this. Applies to both forward (grow) and reverse (shrink) since
-    // no separate reverseCurve is set — Flutter runs the same curve
-    // shape whichever direction the controller is moving.
-    curve: Curves.easeOutCubic,
+    // easeInOutCubic: smooth start and end — matches Telegram's soft
+    // reveal better than a pure easeOut. Applies to both forward
+    // (grow) and reverse (shrink) since no separate reverseCurve is set.
+    curve: Curves.easeInOutCubic, // ← CHANGED from easeOutCubic
   );
 
   @override

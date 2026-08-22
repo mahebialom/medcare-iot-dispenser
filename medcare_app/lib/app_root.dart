@@ -356,7 +356,7 @@ class _ShellState extends State<_Shell> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'No connection — showing last synced data',
+                        'No Internet connection. Showing last synced data',
                         style: TextStyle(
                             fontSize: 11,
                             color: c.amber,

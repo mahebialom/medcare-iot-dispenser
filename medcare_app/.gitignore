@@ -67,3 +67,5 @@ functions/node_modules/
 
 # Misc build/debug output from local testing
 build_log.txt
+# Widget Preview related
+.widget_preview/

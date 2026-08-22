@@ -4,6 +4,8 @@ import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../models/device_event.dart';
 import '../models/slot.dart';
+import '../services/pdf_export_service.dart';
+import 'pdf_preview_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key, required this.c});
@@ -30,7 +32,9 @@ class HistoryScreen extends StatelessWidget {
   // event's actual clock hour against that slot's configured schedules'
   // expected time-of-day, picking the closest. If you want this to be
   // exact instead of inferred, the real fix is logging `period` in
-  // pushEvent() on the firmware side.
+  // pushEvent() on the firmware side. Still used for the ON-SCREEN
+  // subtitle below — only the EXPORTED PDF drops this column, since
+  // it's an inference rather than firmware-confirmed data.
   static String? _inferPeriodLabel(DeviceEvent e, List<Slot> slots) {
     if (e.slot < 0 || e.slot >= slots.length || e.timestamp == null) return null;
     final schedules = slots[e.slot].schedules;
@@ -57,6 +61,42 @@ class HistoryScreen extends StatelessWidget {
       }
     }
     return bestLabel;
+  }
+
+  // Same date, always in absolute DD/MM/YYYY form — unlike _dayLabel()
+  // above, this is deliberately NOT "Today"/"Yesterday" relative
+  // labeling. A PDF is a saved document someone may open days or weeks
+  // later; a row printed "Today" would read as flatly wrong by the
+  // time it's actually looked at again.
+  static String _absoluteDateLabel(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  // Builds the PDF row list straight from the same doseEvents +
+  // app.slots this screen already displays — same data, same period
+  // inference, so the exported PDF always matches what's on screen.
+  // The PDF strips any leading icon/emoji from the period label
+  // itself (see buildHistoryPdfBytes/_plainPeriodLabel) — this just
+  // passes the label through as-is.
+  static List<HistoryPdfRow> _toPdfRows(List<DeviceEvent> doseEvents, List<Slot> slots) {
+    return doseEvents
+        .map((e) => HistoryPdfRow(
+              date: _absoluteDateLabel(e.timestamp!),
+              time: _timeLabel(e.timestamp!),
+              medicine: e.name,
+              period: _inferPeriodLabel(e, slots),
+              taken: e.isTaken,
+            ))
+        .toList();
+  }
+
+  void _openPdfPreview(BuildContext context, List<DeviceEvent> doseEvents, List<Slot> slots) {
+    final rows = _toPdfRows(doseEvents, slots);
+    showPdfPreviewSheet(
+      context,
+      c: c,
+      bytesBuilder: (format) => buildHistoryPdfBytes(rows, format),
+      fileName: 'medcare_history_${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
   }
 
   Widget _sectionLabel(String text) => Text(text,
@@ -141,14 +181,41 @@ class HistoryScreen extends StatelessWidget {
             ]),
           ),
 
-        const SizedBox(height: 20),
-        _sectionLabel('RECENT ACTIVITY'),
+        const SizedBox(height: 40),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _sectionLabel('RECENT ACTIVITY'),
+            // Text label to the LEFT of the PDF icon, both tappable
+            // together as one control.
+            InkWell(
+              onTap: doseEvents.isEmpty ? null : () => _openPdfPreview(context, doseEvents, app.slots),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Export',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: doseEvents.isEmpty ? c.muted.withOpacity(0.4) : c.primary)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.file_download_outlined,
+                        size: 18, color: doseEvents.isEmpty ? c.muted.withOpacity(0.4) : c.primary),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
         if (doseEvents.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              'No dispense events logged yet — this fills in once a dose is actually taken or a period ends.',
+              'No dispense events logged yet.This fills in once a dose is actually taken or a period ends.',
               style: TextStyle(fontSize: 12, color: c.muted),
             ),
           ),

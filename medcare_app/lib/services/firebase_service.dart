@@ -31,7 +31,7 @@ class FirebaseService {
   // Used by Dashboard/Schedule. The Tray tab intentionally uses its own
   // separate, more vibrant palette (see tray_painter.dart) — the two
   // are decoupled on purpose.
-  static const _slotColors = ['#1a6b4a', '#1a4e8a', '#8a5a00', '#6e40c9', '#8f97a3'];
+  static const _slotColors = ['#1a6b4a', '#1a4e8a', '#8a5a00', '#6e40c9', '#7A4B67'];
 
   Stream<List<Slot>> watchSlots() {
     return _root.child('slots').onValue.map((event) {
