@@ -145,7 +145,7 @@ class NotificationService extends ChangeNotifier {
 
     if (kIsWeb) return; // no local-notifications support on web
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(initSettings);
 

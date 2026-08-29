@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../config.dart';
 import '../models/app_notification.dart';
@@ -140,8 +141,24 @@ class PushNotificationService {
 /// (no signed-in owner for this device right now), the banner still
 /// shows by default — there's no per-user preference to consult in
 /// that case, and the previous default behavior was to always show it.
+///
+/// NOTE ON DartPluginRegistrant: some setups also need
+/// DartPluginRegistrant.ensureInitialized() here for plugins besides
+/// firebase_messaging to work inside this background isolate. It is
+/// deliberately NOT used in this file — that class has no web
+/// equivalent and fails to compile for a web target (`flutter run -d
+/// chrome`), and this project's dev workflow needs web to keep
+/// compiling. WidgetsFlutterBinding.ensureInitialized() below IS
+/// cross-platform-safe and is tried first. If banners still don't
+/// appear after this fix, the try/catch below will surface the real
+/// error via `adb logcat | grep MedCareBG` — that error message will
+/// tell us definitively whether DartPluginRegistrant (or something
+/// else entirely) is actually needed, rather than guessing.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  debugPrint('[MedCareBG] handler entered');
+  WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp();
 
   final data = message.data;
@@ -151,6 +168,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final typeRaw = data['type'];
 
   final uid = await NotificationService.readCurrentUid();
+  debugPrint('[MedCareBG] uid=$uid');
   var pushEnabled = true;
 
   if (uid != null) {
@@ -165,26 +183,41 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         title: title,
         body: body,
       );
+      debugPrint('[MedCareBG] history saved for id=$id');
     }
     pushEnabled = await NotificationService.readPushEnabledForUid(uid);
+    debugPrint('[MedCareBG] pushEnabled=$pushEnabled');
   }
 
-  if (!pushEnabled) return; // history already saved above — banner skipped
+  if (!pushEnabled) {
+    debugPrint('[MedCareBG] pushEnabled is false — skipping banner');
+    return; // history already saved above — banner skipped
+  }
 
-  final plugin = FlutterLocalNotificationsPlugin();
-  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  await plugin.initialize(const InitializationSettings(android: androidInit));
-  await plugin.show(
-    id.hashCode,
-    title,
-    body,
-    const NotificationDetails(
-      android: AndroidNotificationDetails(
-        'medcare_alerts',
-        'MedCare Alerts',
-        importance: Importance.high,
-        priority: Priority.high,
+  // Wrapped in try/catch — history above already succeeded regardless
+  // of what happens here. If the banner still fails to show after
+  // this fix, this log line (visible via `adb logcat | grep
+  // MedCareBG`) will show the actual exception instead of a silent
+  // no-op, which tells us exactly what to fix next.
+  try {
+    final plugin = FlutterLocalNotificationsPlugin();
+    const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
+    await plugin.initialize(const InitializationSettings(android: androidInit));
+    await plugin.show(
+      id.hashCode,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'medcare_alerts',
+          'MedCare Alerts',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
       ),
-    ),
-  );
+    );
+    debugPrint('[MedCareBG] plugin.show() completed with no exception');
+  } catch (e, st) {
+    debugPrint('[MedCareBG] failed to show banner: $e\n$st');
+  }
 }
