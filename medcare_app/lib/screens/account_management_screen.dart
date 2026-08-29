@@ -148,7 +148,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: c.green.withOpacity(0.15),
+            color: c.muted.withOpacity(0.15),
             border: Border.all(color: c.green.withOpacity(0.4)),
             borderRadius: BorderRadius.circular(14),
           ),

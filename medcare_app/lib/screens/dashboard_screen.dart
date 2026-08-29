@@ -36,18 +36,50 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 10),
             Row(children: [
               Text('Wi-Fi: ', style: TextStyle(color: c.muted, fontSize: 12)),
-              StatusDot(on: app.status.online, onColor: c.green, offColor: c.red),
+              StatusDot(on: app.status.isActuallyOnline, onColor: c.green, offColor: c.red),
               const SizedBox(width: 6),
-              Text(app.status.online ? 'Connected' : 'Offline',
+              Text(app.status.isActuallyOnline ? 'Connected' : 'Offline',
                   style: TextStyle(fontWeight: FontWeight.w600, color: c.text2, fontSize: 12)),
             ]),
             const SizedBox(height: 6),
-            Text('Tray: ⟳ Slot ${app.status.currentSlot + 1}',
-                style: TextStyle(color: c.text2, fontSize: 12)),
+            Text.rich(
+              TextSpan(
+                style: TextStyle(color: c.text2, fontSize: 12),
+                children: [
+                  const TextSpan(text: 'Tray:'),
+                  TextSpan(
+                    text: ' ⟳ Slot ${app.status.currentSlot + 1}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 6),
-            Text('Mode: ${app.status.mode.toUpperCase()}', style: TextStyle(fontWeight: FontWeight.w600, color: c.text2, fontSize: 12)),
+            Text.rich(
+              TextSpan(
+                style: TextStyle(color: c.text2, fontSize: 12),
+                children: [
+                  const TextSpan(text: 'Mode: '),
+                  TextSpan(
+                    text: app.status.mode.toUpperCase(),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 6),
-            Text('Last sync: ${app.status.lastSeen}', style: TextStyle(color: c.text2, fontSize: 12)),
+            Text.rich(
+              TextSpan(
+                style: TextStyle(color: c.text2, fontSize: 12),
+                children: [
+                  const TextSpan(text: 'Last sync: '),
+                  TextSpan(
+                    text: app.status.lastSeenDisplay,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
           ]),
         ),
       ],

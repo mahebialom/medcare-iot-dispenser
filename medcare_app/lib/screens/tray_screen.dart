@@ -169,7 +169,7 @@ class _TrayScreenState extends State<TrayScreen> with SingleTickerProviderStateM
               : 'Tap a compartment or a slot to force dispense',
           style: TextStyle(fontSize: 11, color: c.muted),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 2),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
