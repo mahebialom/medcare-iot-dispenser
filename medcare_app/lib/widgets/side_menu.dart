@@ -4,9 +4,9 @@ import '../screens/settings_screen.dart';
 import '../theme/app_colors.dart';
 import 'status_bar_style.dart';
 import '../screens/account_management_screen.dart';
+import '../screens/device_settings_screen.dart';
 import '../screens/privacy_policy_screen.dart';
 import '../screens/about_screen.dart';
-import '../screens/app_settings_screen.dart';
 import '../main.dart';
 
 /// Right-side sliding menu — opened from the header's hamburger icon

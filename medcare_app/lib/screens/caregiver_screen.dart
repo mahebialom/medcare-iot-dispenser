@@ -278,6 +278,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
       }
 
       if (!mounted) return;
+       showAppToast(context, 'Profile updated successfully');
       widget.onDone();
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -372,8 +373,9 @@ class _EditProfileFormState extends State<_EditProfileForm> {
               child: OutlinedButton(
                 onPressed: _saving ? null : widget.onDone,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: c.muted,
-                  side: BorderSide(color: c.border),
+                  backgroundColor: c.red.withOpacity(0.19),
+                  foregroundColor: c.red,
+                  side: BorderSide(color: c.red),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),

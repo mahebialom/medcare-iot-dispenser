@@ -11,7 +11,7 @@ import 'screens/tray_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/caregiver_screen.dart';
-import 'screens/settings_screen.dart';
+import 'screens/device_settings_screen.dart';
 import 'widgets/side_menu.dart';
 import 'widgets/status_bar_style.dart';
 import 'widgets/app_toast.dart';
