@@ -18,7 +18,7 @@
 > "Empowering blind patients to manage their daily medicines independently — safely, accurately, and on time."
 
 ---
-
+## App Screenshots
 <p align="center">
   <img src="doc/dashboard_light.jpg" width="150"/>
   <img src="doc/tray_light.jpg" width="150"/>
