@@ -19,6 +19,18 @@
 
 ---
 
+<p align="center">
+  <img src="doc/dashboard_light.jpg" width="200"/>
+  <img src="doc/tray_light.jpg" width="200"/>
+  <img src="doc/schedule_light.jpg" width="200"/>
+</p>
+<p align="center">
+  <img src="doc/history_light.jpg" width="200"/>
+  <img src="doc/caregiver_light.jpg" width="200"/>
+  <img src="doc/notification_light.jpg" width="200"/>
+</p>
+
+
 
 
 ## Project Structure
@@ -63,6 +75,10 @@ medcare_app/
 │   │   ├── settings_screen.dart
 │   │   ├── slot_editor_screen.dart
 │   │   ├── splash_screen.dart
+│   │   ├── tray_screen.dart
+│   │   ├── username_setup_screen.dart
+│   │   ├── about_screen.dart
+│   │   ├── privacy_policy_screen.dart
 │   │   ├── tray_screen.dart
 │   │   └── username_setup_screen.dart
 │   │
