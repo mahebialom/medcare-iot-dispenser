@@ -20,14 +20,12 @@
 ---
 
 <p align="center">
-  <img src="doc/dashboard_light.jpg" width="200"/>
-  <img src="doc/tray_light.jpg" width="200"/>
-  <img src="doc/schedule_light.jpg" width="200"/>
-</p>
-<p align="center">
-  <img src="doc/history_light.jpg" width="200"/>
-  <img src="doc/caregiver_light.jpg" width="200"/>
-  <img src="doc/notification_light.jpg" width="200"/>
+  <img src="doc/dashboard_light.jpg" width="150"/>
+  <img src="doc/tray_light.jpg" width="150"/>
+  <img src="doc/schedule_light.jpg" width="150"/>
+  <img src="doc/history_light.jpg" width="150"/>
+  <img src="doc/caregiver_light.jpg" width="150"/>
+  <img src="doc/notification_light.jpg" width="150"/>
 </p>
 
 
