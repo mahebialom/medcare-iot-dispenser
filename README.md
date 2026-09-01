@@ -25,7 +25,6 @@
   <img src="doc/schedule_light.jpg" width="150"/>
   <img src="doc/history_light.jpg" width="150"/>
   <img src="doc/caregiver_light.jpg" width="150"/>
-  <img src="doc/notification_light.jpg" width="150"/>
 </p>
 
 
