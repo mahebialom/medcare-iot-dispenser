@@ -53,7 +53,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete account permanently?'),
         content: const Text(
-          'This will permanently delete your sign-in access, username, and email. This cannot be undone.'
+          'This will permanently delete your sign-in access, username and email. This cannot be undone.'
         ),
         actions: [
           TextButton(
@@ -199,7 +199,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                             strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.delete_forever,
                         size: 15, color: Colors.white),
-                label: Text(_deleting ? 'Deleting…' : 'Delete Account',
+                label: Text(_deleting ? 'Deleting…' : 'Delete My Account',
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

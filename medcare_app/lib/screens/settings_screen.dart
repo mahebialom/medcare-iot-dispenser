@@ -69,7 +69,7 @@ class AppSettingsScreen extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: c.ink)),
                     const SizedBox(height: 3),
                     Text(
-                      "When disabled you won't receive banners or sounds. "
+                      "When disabled you won't receive any notifications. "
                       "Notifications will still be saved to your History.",
                       style: TextStyle(fontSize: 12, color: c.muted, height: 1.35),
                     ),

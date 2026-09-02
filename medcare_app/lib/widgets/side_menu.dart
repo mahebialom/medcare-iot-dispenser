@@ -442,23 +442,23 @@ class _FullScreenPage extends StatelessWidget {
   }
 }
 
-/// Placeholder body for menu destinations not built out yet.
-class _ComingSoonBody extends StatelessWidget {
-  const _ComingSoonBody({required this.c, required this.icon});
-  final AppColors c;
-  final IconData icon;
+// /// Placeholder body for menu destinations not built out yet.
+// class _ComingSoonBody extends StatelessWidget {
+//   const _ComingSoonBody({required this.c, required this.icon});
+//   final AppColors c;
+//   final IconData icon;
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 40, color: c.muted),
-          const SizedBox(height: 12),
-          Text('Coming soon', style: TextStyle(fontSize: 14, color: c.muted)),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Center(
+//       child: Column(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           Icon(icon, size: 40, color: c.muted),
+//           const SizedBox(height: 12),
+//           Text('Coming soon', style: TextStyle(fontSize: 14, color: c.muted)),
+//         ],
+//       ),
+//     );
+//   }
+// }

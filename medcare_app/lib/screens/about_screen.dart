@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../main.dart';
 
@@ -17,6 +18,15 @@ class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key, required this.c});
   final AppColors c;
 
+  static const _supportEmail = 'md.mahebialom@gmail.com';
+  static const _repoUrl = 'https://github.com/mahebialom/medcare-iot-dispenser';
+
+  Future<void> _launch(Uri uri) async {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -28,7 +38,16 @@ class AboutScreen extends StatelessWidget {
             height: 64,
             decoration: BoxDecoration(gradient: c.headerGrad, borderRadius: BorderRadius.circular(16)),
             alignment: Alignment.center,
-            child: const Text('💊', style: TextStyle(fontSize: 30)),
+            clipBehavior: Clip.antiAlias,
+            // Falls back to the emoji glyph if the launcher icon asset
+            // is ever missing from the bundle, so this never crashes.
+            child: Image.asset(
+              'assets/icons/icon.png',
+              width: 64,
+              height: 64,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Text('💊', style: TextStyle(fontSize: 30)),
+            ),
           ),
         ),
         const SizedBox(height: 14),
@@ -39,7 +58,7 @@ class AboutScreen extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Version ${appPackageInfo.version}',
+          'Version ${appPackageInfo.version} (${appPackageInfo.buildNumber})',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, color: c.muted),
         ),
@@ -47,11 +66,28 @@ class AboutScreen extends StatelessWidget {
         _AboutSection(
           c: c,
           title: 'About',
-          body: 'MedCare IoT helps families and caregivers manage a shared '
-              'medicine dispenser together. Track dose schedules, get '
-              'notified about missed doses or low stock, and keep every '
-              'caregiver on the same device in sync in real time.',
+          body: 'MedCare IoT is a smart automatic medicine dispenser built '
+              'for visually impaired and elderly patients. An ESP32-powered '
+              'dispenser rotates through medicine slots, dispenses the right '
+              'dose on schedule and guides the patient through every step '
+              'with spoken audio, no reading required. Caregivers use this '
+              'app to set up schedules, track adherence and get notified '
+              'the moment a dose is missed or stock runs low, all synced to '
+              'the dispenser in real time through Firebase.',
         ),
+        Divider(color: c.borderSoft, height: 1),
+        const SizedBox(height: 22),
+        _AboutSection(
+          c: c,
+          title: 'Key Features',
+          body: '• Audio-guided dispensing with RFID medicine verification\n'
+              '• Morning, lunch, night and exact-time scheduling per slot\n'
+              '• Missed-dose, low-stock and upcoming-dose push notifications\n'
+              '• Multiple caregivers, one dispenser, kept in sync live\n'
+              '• Offline-aware: the dispenser keeps working without Wi-Fi',
+        ),
+        Divider(color: c.borderSoft, height: 1),
+        const SizedBox(height: 22),
         _AboutSection(
           c: c,
           title: 'Developed By',
@@ -60,51 +96,79 @@ class AboutScreen extends StatelessWidget {
         _AboutSection(
           c: c,
           title: 'Support',
-          body: 'Questions, feedback, or an issue to report? Reach us at '
-              'md.mahebialom@gmail.com.',
+          body: 'Questions, feedback, or an issue to report? Reach us at $_supportEmail.',
+          onTap: () => _launch(Uri(scheme: 'mailto', path: _supportEmail, query: 'subject=MedCare IoT Support')),
+        ),
+        _AboutSection(
+          c: c,
+          title: 'Open Source',
+          body: 'The full project (Flutter app, ESP32 firmware and hardware '
+              'wiring) is open source on GitHub.',
+          onTap: () => _launch(Uri.parse(_repoUrl)),
         ),
         _AboutSection(
           c: c,
           title: 'Acknowledgments',
-          body: 'MedCare IoT is built with Flutter, and relies on Firebase '
+          body: 'MedCare IoT is built with Flutter and relies on Firebase '
               '(Authentication, Realtime Database, Cloud Messaging) and '
               'Google Sign-In to operate.',
         ),
         const SizedBox(height: 12),
         Text(
-          '© ${DateTime.now().year} Md. Mahebi Alom Dipu | All rights reserved.',
+          '© $_copyrightYears Md. Mahebi Alom Dipu | All rights reserved.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: c.muted),
         ),
       ],
     );
   }
+
+  // Update _firstReleaseYear once, when the app first ships — everything
+  // else (the "current" side of the range) stays correct on its own.
+  static const _firstReleaseYear = 2026;
+  String get _copyrightYears {
+    final now = DateTime.now().year;
+    return now > _firstReleaseYear ? '$_firstReleaseYear–$now' : '$_firstReleaseYear';
+  }
 }
 
 class _AboutSection extends StatelessWidget {
-  const _AboutSection({required this.c, required this.title, required this.body});
+  const _AboutSection({required this.c, required this.title, required this.body, this.onTap});
   final AppColors c;
   final String title;
   final String body;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: c.muted),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          body,
+          style: TextStyle(
+            fontSize: 13,
+            color: onTap != null ? c.primary : c.text2,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: c.muted),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: TextStyle(fontSize: 13, color: c.text2, height: 1.5),
-          ),
-        ],
-      ),
+      child: onTap == null
+          ? content
+          : InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(8),
+              child: content,
+            ),
     );
   }
 }

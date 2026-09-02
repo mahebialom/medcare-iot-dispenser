@@ -303,6 +303,15 @@ class AppState extends ChangeNotifier {
   Future<void> exitRefill() => firebase.sendCommand('exit_refill');
   Future<void> dispenseSlot(int index) => firebase.dispenseSlot(index);
 
+  /// Firmware only actually reboots while its state machine is
+  /// STATE_IDLE (see the .ino's command handler) — never mid-dispense
+  /// or mid-refill, so this can't strand the lid open or leave a
+  /// half-finished stepper move. There's no ack channel back from the
+  /// firmware, so the app has no way to confirm the restart happened;
+  /// the UI leans on `status.isActuallyOnline` and `status.mode`
+  /// instead of a request/response result here.
+  Future<void> restartDevice() => firebase.sendCommand('restart');
+
   @override
   void dispose() {
     _authSub?.cancel();
