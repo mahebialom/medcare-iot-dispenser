@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/App-Flutter%20Android-green"/>&nbsp;
   <img src="https://img.shields.io/badge/Database-Firebase%20RTDB-orange"/>&nbsp;
   <img src="https://img.shields.io/badge/Status-Active-brightgreen"/>&nbsp;
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg"/>&nbsp;
 </p>
 
 ---
@@ -828,3 +829,8 @@ flutter build apk --release
 - Hall effect sensor for drum position tracking not yet implemented.
 - Quantity tracking is manual. Caregiver must update count from app after refill.
 
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE). See the LICENSE file for the full text. You're free to use, modify and distribute this code (app, firmware and docs) in your own projects, commercial or otherwise, as long as the original copyright notice is kept.
