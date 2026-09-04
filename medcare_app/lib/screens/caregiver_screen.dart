@@ -311,14 +311,16 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('✎ Edit Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: c.ink)),
+        Text('EDIT PROFILE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: c.muted)),
         const SizedBox(height: 12),
+
+        
         TextField(
           controller: _fullName,
           textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.badge_outlined)),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 2),
         TextField(
           enabled: false,
           controller: TextEditingController(text: user?.email ?? ''),
@@ -329,7 +331,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
             fillColor: c.inputBg,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         TextField(
           enabled: false,
           controller: TextEditingController(text: username != null ? '@$username' : ''),
@@ -342,7 +344,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
         ),
         const SizedBox(height: 6),
         Text("Email and username can't be changed", style: TextStyle(fontSize: 11, color: c.muted)),
-        const SizedBox(height: 18),
+        const SizedBox(height: 6),
         TextField(
           controller: _newPassword,
           obscureText: _obscure,
@@ -355,53 +357,47 @@ class _EditProfileFormState extends State<_EditProfileForm> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 2),
         TextField(
           controller: _confirmPassword,
           obscureText: _obscure,
           decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_outline)),
         ),
         if (_message != null) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 2),
           Text(_message!, style: TextStyle(fontSize: 12, color: _messageIsError ? c.red : c.green)),
         ],
-        const SizedBox(height: 18),
-        Row(children: [
-          Expanded(
-            child: SizedBox(
-              height: 46,
-              child: OutlinedButton(
-                onPressed: _saving ? null : widget.onDone,
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: c.red.withOpacity(0.19),
-                  foregroundColor: c.red,
-                  side: BorderSide(color: c.red),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
+        const SizedBox(height: 4),
+        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+          OutlinedButton.icon(
+            onPressed: _saving ? null : widget.onDone,
+            icon: Icon(Icons.close, size: 18, color: c.red),
+            label: Text('Cancel',
+                style: TextStyle(color: c.red, fontWeight: FontWeight.w600, fontSize: 12)),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: c.red.withOpacity(0.4)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: SizedBox(
-              height: 46,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                    : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: _saving
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.check, size: 18, color: Colors.white),
+            label: Text(_saving ? 'Saving...' : 'Save Changes',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.hovered) ? c.primary.withOpacity(0.82) : c.primary,
               ),
+              elevation: const WidgetStatePropertyAll(0),
+              shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 16)),
             ),
           ),
         ]),

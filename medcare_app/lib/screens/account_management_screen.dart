@@ -148,9 +148,15 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: c.muted.withOpacity(0.15),
-            border: Border.all(color: c.green.withOpacity(0.4)),
+            color: c.panel,
+            border: Border.all(color: c.border),
             borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                  color: const Color.fromARGB(255, 239, 3, 3).withOpacity(0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8)),
+            ],
           ),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

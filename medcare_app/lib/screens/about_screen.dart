@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_toast.dart';
 import '../main.dart';
 
 /// Real About content — replaces the "Coming soon" placeholder
@@ -21,9 +22,20 @@ class AboutScreen extends StatelessWidget {
   static const _supportEmail = 'md.mahebialom@gmail.com';
   static const _repoUrl = 'https://github.com/mahebialom/medcare-iot-dispenser';
 
-  Future<void> _launch(Uri uri) async {
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  /// Calls launchUrl() directly instead of gating on canLaunchUrl()
+  /// first. canLaunchUrl() relies on the SAME package-visibility check
+  /// (AndroidManifest.xml's <queries>) that launchUrl() itself needs —
+  /// so on some OEM Android builds it can still return false even once
+  /// <queries> is declared correctly, silently skipping the launch
+  /// with zero feedback. launchUrl() throws instead of silently
+  /// failing when nothing can handle the link, so a real failure
+  /// surfaces as a toast rather than a link that just does nothing.
+  Future<void> _launch(BuildContext context, Uri uri) async {
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && context.mounted) showAppToast(context, "Couldn't open that link");
+    } catch (_) {
+      if (context.mounted) showAppToast(context, "Couldn't open that link");
     }
   }
 
@@ -97,14 +109,14 @@ class AboutScreen extends StatelessWidget {
           c: c,
           title: 'Support',
           body: 'Questions, feedback, or an issue to report? Reach us at $_supportEmail.',
-          onTap: () => _launch(Uri(scheme: 'mailto', path: _supportEmail, query: 'subject=MedCare IoT Support')),
+          onTap: () => _launch(context, Uri(scheme: 'mailto', path: _supportEmail, query: 'subject=MedCare IoT Support')),
         ),
         _AboutSection(
           c: c,
           title: 'Open Source',
           body: 'The full project (Flutter app, ESP32 firmware and hardware '
               'wiring) is open source on GitHub.',
-          onTap: () => _launch(Uri.parse(_repoUrl)),
+          onTap: () => _launch(context, Uri.parse(_repoUrl)),
         ),
         _AboutSection(
           c: c,

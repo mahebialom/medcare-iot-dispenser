@@ -48,5 +48,23 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Without these two, canLaunchUrl()/launchUrl() for the
+             mailto: (Support) and https: (Open Source/GitHub) links in
+             about_screen.dart and privacy_policy_screen.dart silently
+             fail on Android 11+ (API 30+) — package visibility rules
+             mean the app can't see that an email or browser app exists
+             to handle these unless declared here, even though one
+             obviously does. This has no effect on Flutter web (no such
+             restriction there), which is why it worked in a web run
+             but not on a real device. See:
+             https://developer.android.com/training/package-visibility -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="mailto"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

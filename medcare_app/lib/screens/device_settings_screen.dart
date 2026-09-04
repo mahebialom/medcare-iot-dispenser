@@ -31,6 +31,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _lowStock;
   bool _obscurePassword = true;
 
+  // Shared 12px text styles so every field on this screen (input
+  // text, label, helper, suffix) stays visually consistent — set
+  // once here instead of repeating TextStyle(fontSize: 12) at each
+  // TextField.
+  static const _fieldTextStyle = TextStyle(fontSize: 14);
+  static const _fieldLabelStyle = TextStyle(fontSize: 14);
+  static const _fieldHelperStyle = TextStyle(fontSize: 12);
+  static const _fieldSuffixStyle = TextStyle(fontSize: 14);
+
   @override
   void initState() {
     super.initState();
@@ -61,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Restart dispenser?'),
         content: const Text(
           'The dispenser will reboot and be briefly unreachable for about '
-          '10\u201315 seconds. It only restarts once it is idle, so this '
+          '10\u201315 seconds. It only restarts once it is idle, this '
           'will not interrupt an active dispense or refill.',
         ),
         actions: [
@@ -91,11 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final status = context.watch<AppState>().status;
 
     return ListView(
-      padding: const EdgeInsets.only(
-        left: 46,
-        right: 46,
-        bottom: 46,
-      ),
+      padding: const EdgeInsets.all(16),
       children: [
         // ── Not-yet-active notice ──
         Container(
@@ -114,8 +119,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: Text(
                   "Wi-Fi and stock settings are saved in the app only for "
-                  "now — the dispenser's firmware doesn't read this config "
-                  "yet. \"Sync Now\" below is the same: it sends a request "
+                  "now. The dispenser's firmware doesn't read this config "
+                  "yet. \"Sync Now\" below is the same. It sends a request "
                   "the firmware doesn't currently act on either.",
                   style: TextStyle(fontSize: 11, color: c.amber, height: 1.4),
                 ),
@@ -134,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: c.muted)),
         const SizedBox(height: 5),
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.only(left:10,right:10, bottom:10, top:0.5),
           decoration: BoxDecoration(
             gradient: c.deviceGrad,
             border: Border.all(color: c.deviceBorder),
@@ -149,24 +154,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(children: [
             TextField(
               controller: _ssid,
+              style: _fieldTextStyle,
               decoration: const InputDecoration(
                 labelText: 'Network Name (SSID)',
-                prefixIcon: Icon(Icons.wifi),
+                labelStyle: _fieldLabelStyle,
+                prefixIcon: Icon(Icons.wifi, size: 18),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             TextField(
               controller: _password,
               obscureText: _obscurePassword,
+              style: _fieldTextStyle,
               decoration: InputDecoration(
                 labelText: 'Wi-Fi Password',
-                prefixIcon: const Icon(Icons.lock_outline),
+                labelStyle: _fieldLabelStyle,
+                prefixIcon: const Icon(Icons.lock_outline, size: 18),
                 suffixIcon: IconButton(
                   icon: Icon(
                       _obscurePassword
                           ? Icons.visibility_off
                           : Icons.visibility,
-                      size: 20),
+                      size: 18),
                   onPressed: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
                   tooltip: _obscurePassword ? 'Show password' : 'Hide password',
@@ -201,12 +210,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: TextField(
             controller: _lowStock,
             keyboardType: TextInputType.number,
+            style: _fieldTextStyle,
             decoration: const InputDecoration(
               labelText: 'Low Stock Threshold',
-              prefixIcon: Icon(Icons.inventory_2_outlined),
+              labelStyle: _fieldLabelStyle,
+              prefixIcon: Icon(Icons.inventory_2_outlined, size: 18),
               suffixText: 'tablets',
+              suffixStyle: _fieldSuffixStyle,
               helperText:
-                  "You'll get an alert once a slot drops to or below this count.",
+                  "You'll get an alert once a slot drops to threshold.",
+              helperStyle: _fieldHelperStyle,
               helperMaxLines: 2,
             ),
           ),
@@ -246,10 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ]),
-            const SizedBox(height: 12),
-            // Plain default-sized Material 3 OutlinedButton — no
-            // custom height/shape override, so it sizes itself
-            // normally instead of stretching to a large fixed height.
+            const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () {
                 app.requestSync();
@@ -258,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icon(Icons.sync, size: 17, color: c.primary),
               label: Text('Sync Now with Device',
                   style:
-                      TextStyle(color: c.primary, fontWeight: FontWeight.w600)),
+                      TextStyle(color: c.primary, fontWeight: FontWeight.w600, fontSize: 12)),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: c.primary.withOpacity(0.4)),
               ),
@@ -295,81 +305,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? 'Dispenser appears offline. A restart request will sit queued and run whenever it reconnects.'
                         : status.mode == 'idle'
                             ? 'Dispenser is online and idle: safe to restart now.'
-                            : 'Dispenser is online but currently "${status.mode}". The firmware only reboots once it returns to idle, this may not take effect immediately.',
-                    style: TextStyle(fontSize: 12, color: c.red, height: 1.4),
+                            : 'Dispenser is online but currently "${status.mode}". The dispenser only reboots once it returns to idle, this may not take effect immediately.',
+                    style: TextStyle(fontSize: 11, color: c.red, height: 1.4),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () => _confirmRestart(app),
               icon: Icon(Icons.restart_alt, size: 17, color: c.red),
               label: Text('Restart Device',
-                  style: TextStyle(color: c.red, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: c.red, fontWeight: FontWeight.w600,fontSize: 12)),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: c.red.withOpacity(0.4)),
               ),
             ),
           ]),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
 
-        // ── Save / Cancel ──
-        // Plain default-sized Material 3 buttons — TextButton for the
-        // secondary/dismissive action, FilledButton for the primary
-        // one. No custom height, gradient, or shadow — Material 3's
-        // own defaults (already themed via AppColorsTheming in
-        // app_colors.dart) already look modern at a normal size
-        // without needing to hand-design anything here.
-        Row(children: [
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: () {
-                app.toggleSettings(false);
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.close, size: 18),
-              label: const Text('Cancel',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              style: FilledButton.styleFrom(
-                backgroundColor: Color.alphaBlend(
-                  const Color(0xFFE0453A).withOpacity(0.16),
-                  Colors.white,
-                ),
-                foregroundColor: const Color(0xFFE0453A),
-                elevation: 0,
-                side: BorderSide(
-                    color: const Color(0xFFE0453A).withOpacity(0.35),
-                    width: 1.2),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999)),
-              ),
+        // ── Save ──
+        // Cancel was removed here — this screen already has a back
+        // button (app bar / navigation), which serves the exact same
+        // "leave without saving" purpose, so a second dismissive
+        // action was pure redundancy.
+        //
+        // Wrapped in Align rather than left as a bare ListView child:
+        // ListView forces its direct children's WIDTH to fill the full
+        // list width (only height is flexible) — that's exactly why
+        // this button went full-width the moment it was no longer
+        // wrapped in Expanded/Row. Align lets it size to its own
+        // content again while positioning it at the right edge.
+        //
+        // Built with FilledButton (not .icon) + a manual Row so the
+        // icon-to-label gap can be tightened below the framework's
+        // fixed 8px default — matches the compact button style used
+        // on the caregiver/account screens.
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton(
+            onPressed: () {
+              app.saveSettings(DeviceSettings(
+                ssid: _ssid.text,
+                password: _password.text,
+                lowStock: int.tryParse(_lowStock.text) ?? 7,
+              ));
+              showAppToast(context, 'Saved successfully');
+              Navigator.pop(context);
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: c.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check, size: 18, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Save Changes',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12)),
+              ],
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: FilledButton.icon(
-              onPressed: () {
-                app.saveSettings(DeviceSettings(
-                  ssid: _ssid.text,
-                  password: _password.text,
-                  lowStock: int.tryParse(_lowStock.text) ?? 7,
-                ));
-                showAppToast(context, 'Saved successfully');
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.check, size: 18),
-              label: const Text('Save',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              style: FilledButton.styleFrom(
-                backgroundColor: c.primary,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
-        ]),
+        ),
       ],
     );
   }

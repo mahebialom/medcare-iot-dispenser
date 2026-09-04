@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_toast.dart';
 
 /// Real Privacy Policy content — replaces the "Coming soon" placeholder
 /// previously shown for this menu destination (see side_menu.dart).
@@ -51,15 +52,23 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   static const _supportEmail = 'md.mahebialom@gmail.com';
 
-  Future<void> _launchEmail() async {
+  // See about_screen.dart's _launch() for why this calls launchUrl()
+  // directly instead of gating on canLaunchUrl() — same
+  // package-visibility caveat applies here.
+  Future<void> _launchEmail(BuildContext context) async {
     final uri = Uri(scheme: 'mailto', path: _supportEmail, query: 'subject=MedCare IoT Privacy Question');
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && context.mounted) showAppToast(context, "Couldn't open that link");
+    } catch (_) {
+      if (context.mounted) showAppToast(context, "Couldn't open that link");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      padding: const EdgeInsets.fromLTRB(15, 20, 8, 32),
       children: [
         // Header — mirrors the icon-tile treatment on the About screen
         // so the two info screens read as one consistent "family"
@@ -255,7 +264,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: c.text2, height: 1.4)),
         const SizedBox(height: 6),
         InkWell(
-          onTap: _launchEmail,
+          onTap: () => _launchEmail(context),
           borderRadius: BorderRadius.circular(6),
           child: Row(
             mainAxisSize: MainAxisSize.min,
