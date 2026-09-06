@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 
 /// Opens the PDF preview as a modal overlay sliding up over whatever
@@ -87,6 +89,9 @@ Future<void> showPdfPreviewSheet(
                                 '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
                             final generatedFileName = 'MedCare_${dateStr}_${timeStr}.pdf';
                             await Printing.sharePdf(bytes: bytes, filename: generatedFileName);
+                            if (context.mounted) {
+                              context.read<AppState>().logAction('pdf_exported', detail: fileName);
+                            }
                           },
                         ),
                       ],
@@ -118,37 +123,3 @@ Future<void> showPdfPreviewSheet(
     ),
   );
 }
-
-/// Small floating circular close button — same "translucent pill
-/// behind a plain icon" language as _HeaderIcon in app_root.dart,
-/// just circular and sized down for overlaying corner content instead
-/// of sitting in a header row.
-
-
-
-// class _CloseChip extends StatelessWidget {
-//   const _CloseChip({required this.c, required this.onTap});
-//   final AppColors c;
-//   final VoidCallback onTap;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Material(
-//       color: Colors.transparent,
-//       child: InkWell(
-//         onTap: onTap,
-//         customBorder: const CircleBorder(),
-//         child: Container(
-//           width: 32,
-//           height: 32,
-//           alignment: Alignment.center,
-//           decoration: BoxDecoration(
-//             shape: BoxShape.circle,
-//             color: c.ink.withOpacity(0.55),
-//           ),
-//           child: const Icon(Icons.close, size: 18, color: Colors.white),
-//         ),
-//       ),
-//     );
-//   }
-// }

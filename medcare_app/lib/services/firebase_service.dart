@@ -3,6 +3,7 @@ import '../models/slot.dart';
 import '../models/device_status.dart';
 import '../models/device_event.dart';
 import '../models/caregiver.dart';
+import '../models/activity_log_entry.dart';
 
 /// All Firebase Realtime Database reads/writes for one dispenser device.
 /// Paths here match your firmware's fetchSlotsFromFirebase() /
@@ -264,4 +265,91 @@ class FirebaseService {
   /// slot on demand from the app needs a small firmware addition —
   /// see the guide for the exact snippet to add to streamCallback().
   Future<void> dispenseSlot(int index) => sendCommand('dispense_slot_$index');
+
+  /// Writes ONE caregiver-triggered action to
+  /// /dispensers/{id}/activity_log — parallel to /events above, but
+  /// for actions the APP causes (manual dispense, refill toggles,
+  /// settings saves, restart requests, schedule edits) rather than
+  /// ones the FIRMWARE reports on its own. See AppState's individual
+  /// action methods (saveSlot, startRefill, exitRefill, saveSettings,
+  /// restartDevice, dispenseSlot) for where this actually gets called
+  /// — never called directly from a screen.
+  ///
+  /// Requires a security rule that rejects a caregiver writing under
+  /// anyone else's uid and blocks editing/deleting past entries once
+  /// written — see the activity_log rule block in your
+  /// database.rules.json.
+  // Same 12-hour AM/PM formatting convention as history_screen.dart's
+  // _timeLabel, plus an absolute Y-M-D date (a "Today"/"Yesterday"
+  // relative label wouldn't make sense sitting in a database record
+  // that might be read months later). Used ONLY for clientTimeLabel
+  // below — never for anything the app's own logic depends on.
+  static String _clientTimeLabel(DateTime d) {
+    final h12 = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final ampm = d.hour < 12 ? 'AM' : 'PM';
+    final time = '${h12.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')} $ampm';
+    final date = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    return '$date $time';
+  }
+
+  Future<void> logActivity({
+    required String uid,
+    String? fullNameSnapshot,
+    required String action,
+    String? detail,
+  }) {
+    final entry = <String, dynamic>{
+      'uid': uid,
+      'action': action,
+      'timestamp': ServerValue.timestamp,
+      // Convenience ONLY — computed from the WRITING caregiver's own
+      // device clock, purely so a Firebase console glance shows
+      // something human-readable without needing DevTools or an
+      // epoch converter. Never the field to trust for ordering,
+      // filtering, or anything the app's own logic relies on —
+      // `timestamp` above (server-side, immune to a wrong device
+      // clock) stays the only authoritative field. A caregiver with a
+      // wrong system clock would produce a wrong label here, which is
+      // an acceptable trade-off for something purely cosmetic.
+      //
+      // NOTE ON FIELD ORDER: Firebase Realtime Database always
+      // displays an object's fields alphabetically in the console —
+      // regardless of what order they're inserted here. Renaming
+      // fields is meaningful; reordering them by write order is not
+      // possible at all, on this platform.
+      'time': _clientTimeLabel(DateTime.now()),
+    };
+    if (fullNameSnapshot != null && fullNameSnapshot.isNotEmpty) {
+      entry['user'] = fullNameSnapshot;
+    }
+    if (detail != null) entry['detail'] = detail;
+    return _root.child('activity_log').push().set(entry);
+  }
+
+  /// Same shape and same `limitToLast` reasoning as watchEvents()
+  /// above — without a cap, this node only ever grows for the entire
+  /// lifetime of a dispenser.
+  Stream<List<ActivityLogEntry>> watchActivityLog({int limit = 100}) {
+    return _root
+        .child('activity_log')
+        .orderByChild('timestamp')
+        .limitToLast(limit)
+        .onValue
+        .map((event) {
+      final raw = event.snapshot.value;
+      final entries = <ActivityLogEntry>[];
+      if (raw is Map) {
+        for (final e in raw.entries) {
+          if (e.value is Map) {
+            entries.add(ActivityLogEntry.fromJson(e.key.toString(), e.value as Map));
+          }
+        }
+      }
+      entries.sort((a, b) {
+        if (a.timestamp == null || b.timestamp == null) return 0;
+        return b.timestamp!.compareTo(a.timestamp!); // newest first
+      });
+      return entries;
+    });
+  }
 }

@@ -265,16 +265,23 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     });
 
     try {
+      final oldName = user.displayName ?? '';
       final newName = _fullName.text.trim();
-      if (newName != (user.displayName ?? '')) {
+      if (newName != oldName) {
         await user.updateDisplayName(newName);
         if (mounted) {
           await context.read<AppState>().firebase.updateCaregiverFullName(uid: user.uid, fullName: newName);
+          context.read<AppState>().logAction('profile_renamed', detail: '$oldName\u2192$newName');
         }
       }
 
       if (_newPassword.text.isNotEmpty) {
         await user.updatePassword(_newPassword.text);
+        // Deliberately no `detail` here — the log is visible to every
+        // caregiver on this dispenser, and even hinting at password
+        // content or length would be a real disclosure. "It happened"
+        // is all that's useful or safe to record.
+        if (mounted) context.read<AppState>().logAction('password_changed');
       }
 
       if (!mounted) return;

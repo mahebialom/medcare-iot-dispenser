@@ -85,7 +85,10 @@ class AppSettingsScreen extends StatelessWidget {
                 scale: 1.05,
                 child: Switch(
                   value: enabled,
-                  onChanged: (value) => app.notifications.setPushEnabled(value),
+                  onChanged: (value) {
+                    app.notifications.setPushEnabled(value);
+                    app.logAction('push_notifications_toggled', detail: value ? 'on' : 'off');
+                  },
                   activeThumbColor: Colors.white,
                   activeTrackColor: c.primary,
                   inactiveThumbColor: Colors.white,
