@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import '../auth_gate.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/status_dot.dart';
 
 class CaregiverScreen extends StatefulWidget {
   const CaregiverScreen({super.key, required this.c});
@@ -154,13 +155,38 @@ class _CaregiverScreenState extends State<CaregiverScreen> {
             decoration: BoxDecoration(
                 color: c.panel, border: Border.all(color: c.border), borderRadius: BorderRadius.circular(14)),
             child: Row(children: [
-              CircleAvatar(
-                radius: 21,
-                backgroundColor: c.deviceBorder,
-                child: Text(
-                  cg.fullName.isNotEmpty ? cg.fullName[0].toUpperCase() : '?',
-                  style: TextStyle(color: c.ink, fontWeight: FontWeight.bold),
-                ),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 21,
+                    backgroundColor: c.deviceBorder,
+                    child: Text(
+                      cg.fullName.isNotEmpty ? cg.fullName[0].toUpperCase() : '?',
+                      style: TextStyle(color: c.ink, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  // Bottom-right presence badge — a caregiver being
+                  // offline isn't a problem the way the DEVICE being
+                  // offline is, so this uses a neutral muted offColor
+                  // instead of the alarming red StatusDot uses for the
+                  // Wi-Fi indicator elsewhere. The panel-colored ring
+                  // (via the outer Container) keeps the dot legible
+                  // against whatever's behind the avatar.
+                  Positioned(
+                    right: -1,
+                    bottom: -1,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(color: c.panel, shape: BoxShape.circle),
+                      child: StatusDot(
+                        on: app.onlineCaregiverUids.contains(cg.uid),
+                        onColor: const Color(0xFF34C759),
+                        offColor: const Color(0xFFCDCCCC),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -319,7 +345,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
       padding: const EdgeInsets.all(16),
       children: [
         Text('EDIT PROFILE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: c.muted)),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
 
         
         TextField(
@@ -327,7 +353,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
           textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.badge_outlined)),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 12),
         TextField(
           enabled: false,
           controller: TextEditingController(text: user?.email ?? ''),
@@ -338,7 +364,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
             fillColor: c.inputBg,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         TextField(
           enabled: false,
           controller: TextEditingController(text: username != null ? '@$username' : ''),
@@ -364,17 +390,17 @@ class _EditProfileFormState extends State<_EditProfileForm> {
             ),
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 12),
         TextField(
           controller: _confirmPassword,
           obscureText: _obscure,
           decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_outline)),
         ),
         if (_message != null) ...[
-          const SizedBox(height: 2),
+          const SizedBox(height: 10),
           Text(_message!, style: TextStyle(fontSize: 12, color: _messageIsError ? c.red : c.green)),
         ],
-        const SizedBox(height: 4),
+        const SizedBox(height: 18),
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           OutlinedButton.icon(
             onPressed: _saving ? null : widget.onDone,
@@ -384,7 +410,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: c.red.withOpacity(0.4)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
           const SizedBox(width: 8),
@@ -404,7 +430,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
               ),
               elevation: const WidgetStatePropertyAll(0),
               shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 16)),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
             ),
           ),
         ]),

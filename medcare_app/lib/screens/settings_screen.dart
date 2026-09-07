@@ -76,7 +76,7 @@ class AppSettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+               const SizedBox(width: 8),
               // Material 3 switch — thumbIcon draws a check/x glyph
               // inside the thumb itself, and the slightly larger scale
               // gives it a chunkier, more deliberate feel than the

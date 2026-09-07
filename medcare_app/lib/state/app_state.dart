@@ -49,7 +49,14 @@ class AppState extends ChangeNotifier {
   StreamSubscription<bool>? _connectedSub;
   StreamSubscription<List<Caregiver>>? _caregiversSub;
   StreamSubscription<List<ActivityLogEntry>>? _activityLogSub;
+  StreamSubscription<Set<String>>? _presenceSub;
   Timer? _reminderTimer;
+  // Remembered purely so _cancelDataSubscriptions can call
+  // firebase.stopPresence(uid) — by the time that runs (right after a
+  // sign-out), FirebaseAuth.instance.currentUser is already null, so
+  // the uid has to be captured here while signed in, not looked up at
+  // cleanup time.
+  String? _myUid;
 
   List<Slot> slots = List.generate(5, (i) => Slot.empty(i));
   DeviceStatus status = const DeviceStatus();
@@ -74,6 +81,12 @@ class AppState extends ChangeNotifier {
   // doc comment for the uid vs fullNameSnapshot distinction.
   List<ActivityLogEntry> activityLog = [];
 
+  // uids of caregivers with at least one live connection right now —
+  // see FirebaseService.startPresence/watchOnlineCaregiverUids. Check
+  // membership by uid (`onlineCaregiverUids.contains(caregiver.uid)`),
+  // never assume every entry in `caregivers` has a matching uid here.
+  Set<String> onlineCaregiverUids = {};
+
   // Baselines "events that already existed before this subscription
   // started watching" — see _checkEventNotifications()'s doc comment.
   bool _eventsBaselined = false;
@@ -94,6 +107,8 @@ class AppState extends ChangeNotifier {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       PushNotificationService().init(uid: uid, notifications: notifications);
+      _myUid = uid;
+      firebase.startPresence(uid);
     }
     _slotsSub = firebase.watchSlots().listen((updated) {
       slots = updated;
@@ -120,6 +135,10 @@ class AppState extends ChangeNotifier {
       activityLog = updated;
       notifyListeners();
     });
+    _presenceSub = firebase.watchOnlineCaregiverUids().listen((updated) {
+      onlineCaregiverUids = updated;
+      notifyListeners();
+    });
     // Checked once immediately, then every minute — the "medicine due
     // within 20 minutes" reminder isn't a device event at all, it's
     // purely a client-side clock check against each schedule's window.
@@ -134,6 +153,7 @@ class AppState extends ChangeNotifier {
     _connectedSub?.cancel();
     _caregiversSub?.cancel();
     _activityLogSub?.cancel();
+    _presenceSub?.cancel();
     _reminderTimer?.cancel();
     _slotsSub = null;
     _statusSub = null;
@@ -141,9 +161,14 @@ class AppState extends ChangeNotifier {
     _connectedSub = null;
     _caregiversSub = null;
     _activityLogSub = null;
+    _presenceSub = null;
     _reminderTimer = null;
     _eventsBaselined = false;
     _priorEventKeys = {};
+    if (_myUid != null) {
+      firebase.stopPresence(_myUid!);
+      _myUid = null;
+    }
   }
 
   void _resetToEmpty() {
@@ -152,6 +177,7 @@ class AppState extends ChangeNotifier {
     events = [];
     caregivers = [];
     activityLog = [];
+    onlineCaregiverUids = {};
     isOnline = true;
     notifyListeners();
   }

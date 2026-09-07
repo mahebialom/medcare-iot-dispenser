@@ -37,7 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // TextField.
   static const _fieldTextStyle = TextStyle(fontSize: 14);
   static const _fieldLabelStyle = TextStyle(fontSize: 14);
-  static const _fieldHelperStyle = TextStyle(fontSize: 12);
+  static const _fieldHelperStyle = TextStyle(fontSize: 10);
   static const _fieldSuffixStyle = TextStyle(fontSize: 14);
 
   @override
@@ -306,7 +306,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : status.mode == 'idle'
                             ? 'Dispenser is online and idle: safe to restart now.'
                             : 'Dispenser is online but currently "${status.mode}". The dispenser only reboots once it returns to idle, this may not take effect immediately.',
-                    style: TextStyle(fontSize: 11, color: c.red, height: 1.4),
+                    style: TextStyle(fontSize: 12, color: c.red, height: 1.4),
                   ),
                 ),
               ],
@@ -343,7 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // fixed 8px default — matches the compact button style used
         // on the caregiver/account screens.
         Align(
-          alignment: Alignment.centerRight,
+          alignment: Alignment.center,
           child: FilledButton(
             onPressed: () {
               app.saveSettings(DeviceSettings(
@@ -359,7 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 120, vertical: 8),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,

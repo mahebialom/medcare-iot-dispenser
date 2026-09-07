@@ -49,8 +49,8 @@ class _SlotEditorScreenState extends State<SlotEditorScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('✎ Slot ${widget.slot.index + 1} Configuration',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: c.ink)),
+        Text('SLOT ${widget.slot.index + 1} CONFIGURATION',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: c.muted)),
         const SizedBox(height: 12),
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'Medicine Name')),
         const SizedBox(height: 8),
@@ -128,46 +128,49 @@ class _SlotEditorScreenState extends State<SlotEditorScreen> {
           onChanged: (v) => setState(() => _enabled = v),
         ),
         const SizedBox(height: 14),
-        Row(children: [
-          Expanded(
-            child: SizedBox(
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () => app.closeSlotEditor(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: c.muted,
-                  side: BorderSide(color: c.border),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+          OutlinedButton.icon(
+            onPressed: () => app.closeSlotEditor(),
+            icon: Icon(Icons.close, size: 16, color: c.primary),
+            label: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+            style: ButtonStyle(
+              foregroundColor: WidgetStatePropertyAll(c.primary),
+              // Outlined buttons have no solid background to darken
+              // like Save's ElevatedButton does — the Material-
+              // standard hover feedback here is a light tint over the
+              // otherwise-transparent background instead, using the
+              // same color the button's own border/text already use.
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.hovered) ? c.primary.withOpacity(0.08) : Colors.transparent,
               ),
+              side: WidgetStatePropertyAll(BorderSide(color: c.primary.withOpacity(0.4))),
+              shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  final updated = widget.slot.copyWith(
-                    medicineName: _name.text,
-                    dose: _dose.text,
-                    quantity: int.tryParse(_qty.text) ?? widget.slot.quantity,
-                    enabled: _enabled,
-                    schedules: _schedules,
-                  );
-                  app.saveSlot(updated); // writes ONLY this slot — see AppState.saveSlot
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Save → Push to Device',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: () {
+              final updated = widget.slot.copyWith(
+                medicineName: _name.text,
+                dose: _dose.text,
+                quantity: int.tryParse(_qty.text) ?? widget.slot.quantity,
+                enabled: _enabled,
+                schedules: _schedules,
+              );
+              app.saveSlot(updated); // writes ONLY this slot — see AppState.saveSlot
+            },
+            icon: const Icon(Icons.check, size: 16, color: Colors.white),
+            label: const Text('Save → Push to Device',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.hovered) ? c.primary.withOpacity(0.82) : c.primary,
               ),
+              foregroundColor: const WidgetStatePropertyAll(Colors.white),
+              elevation: const WidgetStatePropertyAll(0),
+              shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
             ),
           ),
         ]),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/slot.dart';
 import '../models/device_status.dart';
@@ -11,6 +12,13 @@ import '../models/activity_log_entry.dart';
 class FirebaseService {
   FirebaseService(this.deviceId);
   final String deviceId;
+
+  // This device's own connection entry under /presence/{uid}/connections
+  // (see startPresence below) — kept so stopPresence can remove exactly
+  // this connection on a graceful sign-out, and the subscription that
+  // (re-)establishes it after every .info/connected reconnect.
+  DatabaseReference? _myPresenceConnectionRef;
+  StreamSubscription<DatabaseEvent>? _presenceConnectedSub;
 
   DatabaseReference get _root =>
       FirebaseDatabase.instance.ref('dispensers/$deviceId');
@@ -350,6 +358,90 @@ class FirebaseService {
         return b.timestamp!.compareTo(a.timestamp!); // newest first
       });
       return entries;
+    });
+  }
+
+  /// Standard Firebase "presence" recipe, adapted to this app's
+  /// per-dispenser structure: /dispensers/{id}/presence/{uid}/connections
+  /// holds ONE push-generated child per live socket connection this
+  /// uid has open (normally one, but this stays correct even if the
+  /// same caregiver is signed in on two devices at once). A caregiver
+  /// counts as online while that connections map is non-empty — see
+  /// watchOnlineCaregiverUids() below.
+  ///
+  /// WHY onDisconnect() AND NOT JUST "set online:true, unset on sign
+  /// out": onDisconnect() is registered ON THE SERVER, tied to this
+  /// specific socket — so it fires even if the app crashes, loses
+  /// network, or is force-killed, cases where no client-side sign-out
+  /// code ever gets a chance to run. Relying on the app to cleanly
+  /// unset its own "online" flag would leave a crashed/killed session
+  /// stuck showing "online" forever.
+  ///
+  /// WHY THIS RE-RUNS ON EVERY .info/connected FLIP TO TRUE, NOT JUST
+  /// ONCE: onDisconnect() handlers are cleared by the server the
+  /// moment a disconnect actually fires, and are per-CONNECTION, not
+  /// per-uid — so after any reconnect (a real network drop, not just
+  /// a sign-out), a brand new connection exists with no onDisconnect
+  /// hook of its own yet. Listening on .info/connected and re-arming
+  /// on every `true` is what makes this correct across flaky
+  /// connections, not just the first app launch.
+  void startPresence(String uid) {
+    stopPresence(uid); // avoid double-registering if called twice for the same uid
+    final connectedRef = FirebaseDatabase.instance.ref('.info/connected');
+    final connectionsRef = _root.child('presence/$uid/connections');
+    final lastOnlineRef = _root.child('presence/$uid/lastOnline');
+
+    _presenceConnectedSub = connectedRef.onValue.listen((event) {
+      final connected = (event.snapshot.value as bool?) ?? false;
+      if (!connected) return;
+
+      final myConnection = connectionsRef.push();
+      _myPresenceConnectionRef = myConnection;
+      // Removes JUST this one connection entry when THIS socket drops
+      // — other simultaneous connections (another device, or the next
+      // reconnect's own new entry) are untouched.
+      myConnection.onDisconnect().remove();
+      myConnection.set(true);
+      lastOnlineRef.onDisconnect().set(ServerValue.timestamp);
+    });
+  }
+
+  /// Explicit, immediate cleanup for a GRACEFUL sign-out — deliberately
+  /// not left to onDisconnect() alone, since onDisconnect only fires
+  /// once the underlying socket actually drops, which may lag well
+  /// behind the moment the user taps "Sign Out" (the SDK can keep the
+  /// same socket alive across an auth state change). Without this, a
+  /// caregiver who signs out could keep showing "online" to everyone
+  /// else for some indeterminate extra time.
+  void stopPresence(String uid) {
+    _presenceConnectedSub?.cancel();
+    _presenceConnectedSub = null;
+    final ref = _myPresenceConnectionRef;
+    _myPresenceConnectionRef = null;
+    if (ref != null) {
+      ref.onDisconnect().cancel();
+      ref.remove();
+      _root.child('presence/$uid/lastOnline').set(ServerValue.timestamp);
+    }
+  }
+
+  /// A caregiver counts as online while their `connections` map under
+  /// /presence/{uid} has at least one child — see startPresence()'s
+  /// doc comment for why this is a map of connections rather than a
+  /// single boolean.
+  Stream<Set<String>> watchOnlineCaregiverUids() {
+    return _root.child('presence').onValue.map((event) {
+      final raw = event.snapshot.value;
+      final online = <String>{};
+      if (raw is Map) {
+        for (final entry in raw.entries) {
+          final v = entry.value;
+          if (v is Map && v['connections'] is Map && (v['connections'] as Map).isNotEmpty) {
+            online.add(entry.key.toString());
+          }
+        }
+      }
+      return online;
     });
   }
 }
