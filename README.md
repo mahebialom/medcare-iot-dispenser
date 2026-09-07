@@ -18,7 +18,7 @@
 ---
 ## MedCare  App Screenshots
 <p align="center">
-  <img src="doc/splash.jpg" width="460"/>
+  <img src="doc/splash.jpg" width="760"/>
 </p>
 <p align="center">
   <img src="doc/dashboard_light.jpg" width="150"/>
