@@ -16,10 +16,11 @@
 
 **MedCare IoT** is an IoT-based smart medicine dispenser designed specifically for visually impaired and elderly patients. It autonomously dispenses the correct medicine at scheduled times, provides audio guidance throughout the process, and enables remote caregiver monitoring through a Flutter Android app connected to Firebase. The system combines an ESP32-powered medicine dispenser with a Flutter and Firebase mobile application, allowing the dispenser to rotate through medicine slots according to a predefined schedule, dispense medication at the correct time, provide voice guidance, and keep caregivers informed in real time, even when they are away from home.
 
-> "Empowering blind patients to manage their daily medicines independently — safely, accurately, and on time."
-
 ---
-## App Screenshots
+## MedCare  App Screenshots
+<p align="center">
+  <img src="doc/splash.jpg" width="460"/>
+</p>
 <p align="center">
   <img src="doc/dashboard_light.jpg" width="150"/>
   <img src="doc/tray_light.jpg" width="150"/>
