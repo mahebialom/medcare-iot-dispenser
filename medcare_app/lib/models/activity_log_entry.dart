@@ -84,6 +84,8 @@ class ActivityLogEntry {
         return 'Started refill mode';
       case 'refill_exit':
         return 'Exited refill mode';
+      case 'refill_advance':
+        return 'Advanced to next refill slot';
       case 'settings_saved':
         return 'Saved Wi-Fi/stock settings';
       case 'restart_requested':

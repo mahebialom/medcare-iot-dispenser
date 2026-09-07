@@ -456,6 +456,17 @@ class AppState extends ChangeNotifier {
     return firebase.sendCommand('exit_refill');
   }
 
+  /// Advances the dispenser to the next slot WHILE STAYING in refill
+  /// mode — distinct from exitRefill() above, which leaves refill mode
+  /// entirely. Deliberately has no pending/waiting UI concept the way
+  /// Start/Exit Refill do in tray_screen.dart — advancing slots during
+  /// a refill is meant to feel instant and repeatable (tap through
+  /// each of the 5 slots quickly), not gated on a status round trip.
+  Future<void> advanceRefill() {
+    _logActivity('refill_advance');
+    return firebase.sendCommand('advance_refill');
+  }
+
   Future<void> dispenseSlot(int index) {
     final name = (index >= 0 && index < slots.length) ? slots[index].medicineName : 'slot_$index';
     _logActivity('manual_dispense', detail: name);

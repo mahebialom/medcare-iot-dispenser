@@ -24,11 +24,12 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
   );
   late Animation<double> _angleAnim = AlwaysStoppedAnimation(TrayPainter.slotCenterAngle(0));
 
-  // Drives the three-bouncing-dots loading icon on the Refill
-  // Initiating button — separate from _rotController above (which is
-  // for the tray's slot-to-slot rotation and has its own one-shot
-  // forward() calls), so this can loop continuously and independently
-  // via repeat()/stop() without any risk of the two interfering.
+  // Drives the three-bouncing-dots loading icon on the pending
+  // Start/Exit Refill button — separate from _rotController above
+  // (which is for the tray's slot-to-slot rotation and has its own
+  // one-shot forward() calls), so this can loop continuously and
+  // independently via repeat()/stop() without any risk of the two
+  // interfering.
   late final AnimationController _bounceController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
@@ -38,24 +39,61 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
   int? _lastSyncedDeviceSlot;
   bool _initialized = false;
 
-  // ── "Refill Initiating…" transitional state ──
-  // Tapping Start Refill only WRITES a command to Firebase — the
-  // firmware has to pick it up off its SSE stream and actually flip
-  // status.mode to "refill" before the real "Exit Refill" UI can show
-  // (same request/no-ack gap as Restart Device in device_settings_screen.dart).
-  // Without this, tapping Start Refill visibly did nothing for however
-  // long that round trip takes. This fills that gap locally: a
-  // pending flag drives a green button with an animating "..." while
-  // waiting, cleared the moment app.status.mode actually becomes
-  // "refill" (see build()) — or by the timeout below if it never does.
-  bool _refillPending = false;
+  // ── "Refill Initiating…" / "Exiting Refill…" transitional state ──
+  // Tapping Start Refill or Exit Refill only WRITES a command to
+  // Firebase — the firmware has to pick it up off its SSE stream and
+  // actually flip status.mode before the real button for the OTHER
+  // side can show (same request/no-ack gap as Restart Device in
+  // device_settings_screen.dart). Without this, tapping either one
+  // visibly did nothing for however long that round trip takes.
+  //
+  // One shared `_pendingAction` (rather than two separate booleans)
+  // since only one of these can ever be in flight at a time — you
+  // can't be starting AND exiting refill mode simultaneously — so a
+  // single field plus one set of dots/timeout timers covers both,
+  // instead of duplicating the whole mechanism per action.
+  //   'start' → waiting for status.mode to become 'refill'
+  //   'exit'  → waiting for status.mode to become 'idle' SPECIFICALLY
+  //             (not just "no longer refill") — see the check in
+  //             build() below.
+  String? _pendingAction;
   int _pendingDots = 0;
   Timer? _pendingDotsTimer;
   Timer? _pendingTimeoutTimer;
 
-  void _beginRefillPending() {
+  // ── Next Slot tap confirmation ──
+  // Next Slot deliberately has NO pending/waiting state (see
+  // advanceRefill()'s doc comment in app_state.dart) — it's meant to
+  // feel instant and repeatable. But "instant with zero feedback"
+  // just looks broken, so this is a separate, purely cosmetic,
+  // fixed-duration pulse + icon swap that confirms the tap registered
+  // WITHOUT implying "waiting for the dispenser to respond" the way
+  // the green pending button does for Start/Exit.
+  late final AnimationController _nextSlotPulseController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 350),
+  );
+  late final Animation<double> _nextSlotScale = TweenSequence([
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
+    TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 60),
+  ]).animate(_nextSlotPulseController);
+  bool _nextSlotConfirmed = false;
+  Timer? _nextSlotConfirmTimer;
+
+  void _handleNextSlotTap(AppState app) {
+    app.advanceRefill();
+    showAppToast(context, 'Advancing to next slot');
+    _nextSlotPulseController.forward(from: 0);
+    setState(() => _nextSlotConfirmed = true);
+    _nextSlotConfirmTimer?.cancel();
+    _nextSlotConfirmTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _nextSlotConfirmed = false);
+    });
+  }
+
+  void _beginPending(String action) {
     setState(() {
-      _refillPending = true;
+      _pendingAction = action;
       _pendingDots = 0;
     });
     _bounceController.repeat();
@@ -65,23 +103,23 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
       setState(() => _pendingDots = (_pendingDots + 1) % 4);
     });
     // Safety net: if the dispenser is offline or just slow, don't leave
-    // this button stuck on "Refill Initiating…" forever with no way out.
+    // this button stuck pending forever with no way out.
     _pendingTimeoutTimer?.cancel();
     _pendingTimeoutTimer = Timer(const Duration(seconds: 8), () {
       if (!mounted) return;
-      _endRefillPending();
+      _endPending();
       showAppToast(context, 'No response from dispenser. Please Check your dispenser', isError: true);
     });
   }
 
-  void _endRefillPending() {
+  void _endPending() {
     _pendingDotsTimer?.cancel();
     _pendingTimeoutTimer?.cancel();
     _pendingDotsTimer = null;
     _pendingTimeoutTimer = null;
     _bounceController.stop();
     _bounceController.value = 0;
-    if (mounted) setState(() => _refillPending = false);
+    if (mounted) setState(() => _pendingAction = null);
   }
 
   /// Animates the pointer from wherever it currently is to `target`,
@@ -146,18 +184,31 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
       }
     }
 
-    // Firmware confirmed the refill command took effect — drop the
-    // local "Initiating…" placeholder and let the real Exit Refill
+    // Firmware confirmed the pending command took effect — drop the
+    // local "Initiating…"/"Exiting…" placeholder and let the real
     // button (driven straight off app.status.mode below) take over.
-    if (_refillPending && app.status.mode == 'refill') {
+    // Exit specifically waits for 'idle' — not just "anything other
+    // than refill" — since that's the one state that actually means
+    // the dispenser is done and ready for a fresh Start Refill tap.
+    if (_pendingAction == 'start' && app.status.mode == 'refill') {
       _pendingDotsTimer?.cancel();
       _pendingTimeoutTimer?.cancel();
       _pendingDotsTimer = null;
       _pendingTimeoutTimer = null;
-      _refillPending = false;
+      _bounceController.stop();
+      _bounceController.value = 0;
+      _pendingAction = null;
+    } else if (_pendingAction == 'exit' && app.status.mode == 'idle') {
+      _pendingDotsTimer?.cancel();
+      _pendingTimeoutTimer?.cancel();
+      _pendingDotsTimer = null;
+      _pendingTimeoutTimer = null;
+      _bounceController.stop();
+      _bounceController.value = 0;
+      _pendingAction = null;
     }
 
-    final busy = app.status.mode != 'idle' || _refillPending;
+    final busy = app.status.mode != 'idle' || _pendingAction != null;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -170,23 +221,22 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
         Align(
           alignment: Alignment.centerRight,
           child: (() {
-            if (_refillPending) {
-              // No fixed-width box needed here — this button is alone
-              // on its own row now (not fighting the title for space
-              // like before), and its label's rendered width is already
+            if (_pendingAction != null) {
+              // Same pending-button shape for both actions — only the
+              // label text differs ("Refill Initiating" vs "Exiting
+              // Refill"). No fixed-width box needed: this button is
+              // alone on its own row (not fighting the title for
+              // space), and the label's rendered width is already
               // constant regardless of _pendingDots (the three dots
-              // below are always present, just toggled transparent), so
-              // there's nothing left for a fixed box to protect against.
-              // It can just size to its own content like the other
-              // three states do.
+              // below are always present, just toggled transparent).
+              final label = _pendingAction == 'start' ? 'Refill Initiating' : 'Exiting Refill';
               return ElevatedButton.icon(
                 onPressed: null,
                 icon: _BouncingDots(animation: _bounceController),
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Refill Initiating',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                    Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
                     ...List.generate(
                       3,
                       (i) => Text('.',
@@ -208,17 +258,45 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
               );
             }
             if (app.status.mode == 'refill') {
-              return ElevatedButton.icon(
-                onPressed: () => app.exitRefill(),
-                icon: const Icon(Icons.check_circle_outline, size: 15, color: Colors.white),
-                label: const Text('Exit Refill',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.amber,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
+              // Next Slot (left, green, fire-and-forget — no pending
+              // state at all, per design: it doesn't wait for
+              // anything, unlike Exit Refill beside it) + Exit Refill
+              // (right, amber, waits for status.mode == 'idle').
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      app.advanceRefill();
+                      showAppToast(context, 'Advancing to next slot');
+                    },
+                    icon: const Icon(Icons.skip_next, size: 15, color: Colors.white),
+                    label: const Text('Next Slot',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: c.green,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      app.exitRefill();
+                      _beginPending('exit');
+                    },
+                    icon: const Icon(Icons.check_circle_outline, size: 15, color: Colors.white),
+                    label: const Text('Exit Refill',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: c.amber,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
               );
             }
             if (app.status.mode == 'active') {
@@ -231,7 +309,7 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
             return OutlinedButton.icon(
               onPressed: () {
                 app.startRefill();
-                _beginRefillPending();
+                _beginPending('start');
               },
               icon: Icon(Icons.autorenew, size: 15, color: c.primary),
               label: Text('Start Refill',
@@ -276,11 +354,13 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
         ),
         const SizedBox(height: 14),
         Text(
-          _refillPending
+          _pendingAction == 'start'
               ? 'Waiting for the dispenser to start refill mode'
-              : busy
-                  ? 'Device is ${app.status.mode == 'refill' ? 'in refill mode' : 'busy'}. Try again shortly'
-                  : 'Tap a compartment or a slot to force dispense',
+              : _pendingAction == 'exit'
+                  ? 'Waiting for the dispenser to exit refill mode'
+                  : busy
+                      ? 'Device is ${app.status.mode == 'refill' ? 'in refill mode' : 'busy'}. Try again shortly'
+                      : 'Tap a compartment or a slot to force dispense',
           style: TextStyle(fontSize: 11, color: c.muted),
         ),
         const SizedBox(height: 8),
@@ -364,9 +444,9 @@ class _TrayScreenState extends State<TrayScreen> with TickerProviderStateMixin {
 }
 
 /// Three small dots that bounce up and down in sequence — the loading
-/// icon for the Refill Initiating button, driven by the SAME repeating
-/// [animation] the caller starts/stops (see _beginRefillPending /
-/// _endRefillPending in _TrayScreenState), rather than owning its own
+/// icon for the pending Start/Exit Refill button, driven by the SAME
+/// repeating [animation] the caller starts/stops (see _beginPending /
+/// _endPending in _TrayScreenState), rather than owning its own
 /// controller. Each dot reads a phase-shifted slice of the same 0→1
 /// cycle (`+ index * 0.2`), so the three of them bounce in a staggered
 /// wave instead of all moving in lockstep.
@@ -395,7 +475,7 @@ class _BouncingDots extends StatelessWidget {
         // sine wave — smooth up-then-down motion with no linear snap
         // at the top or bottom of the bounce.
         final dy = -6 * math.sin(t * math.pi);
-        return Transform.translate(offset: Offset(0, dy+3), child: child);
+        return Transform.translate(offset: Offset(0, dy + 3), child: child);
       },
       child: const _Dot(),
     );
