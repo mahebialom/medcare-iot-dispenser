@@ -6,7 +6,6 @@
   <img src="https://img.shields.io/badge/Platform-ESP32-blue"/>&nbsp;
   <img src="https://img.shields.io/badge/App-Flutter%20Android-green"/>&nbsp;
   <img src="https://img.shields.io/badge/Database-Firebase%20RTDB-orange"/>&nbsp;
-  <img src="https://img.shields.io/badge/Status-Active-brightgreen"/>&nbsp;
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg"/>&nbsp;
 </p>
 
